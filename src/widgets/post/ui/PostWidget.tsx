@@ -29,6 +29,7 @@ import { TagFilter } from "@/features/tagFilter/ui/TagFilter.tsx"
 import { SortBy } from "@/features/sortBy/ui/SortBy.tsx"
 import { SortOrder } from "@/features/sortOrder/ui/SortOrder.tsx"
 import { Pagination } from "@/features/pagination/ui/Pagination.tsx"
+import { PostTags } from "@/features/postTags/ui/PostTags.tsx"
 
 export interface NewComment {
   body: string
@@ -55,6 +56,84 @@ export interface Comment {
 export interface Tag {
   url: string
   slug: string
+}
+
+const fetchPostsAPI = async (limit: number, skip: number): Promise<PostResponse> => {
+  const response = await fetch(`/api/posts?limit=${limit}&skip=${skip}`)
+  return response.json()
+}
+
+const fetchUsersAPI = async (): Promise<UserResponse> => {
+  const response = await fetch("/api/users?limit=0&select=username,image")
+  return response.json()
+}
+
+const searchPostsAPI = async (query: string): Promise<PostResponse> => {
+  const response = await fetch(`/api/posts/search?q=${query}`)
+  return response.json()
+}
+
+const fetchPostsByTagAPI = async (tag: string): Promise<PostResponse> => {
+  const response = await fetch(`/api/posts/tag/${tag}`)
+  return response.json()
+}
+
+const updatePostAPI = async (post: PostContent): Promise<PostContent> => {
+  const response = await fetch(`/api/posts/${post.id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(post),
+  })
+  return response.json()
+}
+
+const deletePostAPI = async (id: number): Promise<void> => {
+  await fetch(`/api/posts/${id}`, {
+    method: "DELETE",
+  })
+}
+
+const fetchCommentsAPI = async (postId: number): Promise<{ comments: Comment[] }> => {
+  const response = await fetch(`/api/comments/post/${postId}`)
+  return response.json()
+}
+
+const addCommentAPI = async (comment: { body: string; postId: number | null; userId: number }): Promise<Comment> => {
+  const response = await fetch("/api/comments/add", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(comment),
+  })
+  return response.json()
+}
+
+const updateCommentAPI = async (comment: Comment): Promise<Comment> => {
+  const response = await fetch(`/api/comments/${comment.id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ body: comment.body }),
+  })
+  return response.json()
+}
+
+const deleteCommentAPI = async (id: number): Promise<void> => {
+  await fetch(`/api/comments/${id}`, {
+    method: "DELETE",
+  })
+}
+
+const likeCommentAPI = async (id: number, likes: number): Promise<Comment> => {
+  const response = await fetch(`/api/comments/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ likes: likes + 1 }),
+  })
+  return response.json()
+}
+
+const fetchUserAPI = async (userId: number): Promise<UserProfile> => {
+  const response = await fetch(`/api/users/${userId}`)
+  return response.json()
 }
 
 export const PostWidget = () => {
@@ -99,87 +178,10 @@ export const PostWidget = () => {
     navigate(`?${params.toString()}`)
   }
 
-  function onChangeTags(value: string) {
+  function onChangeTag(value: string) {
     setSelectedTag(value)
     fetchPostsByTag(value)
     updateURL()
-  }
-  const fetchPostsAPI = async (limit: number, skip: number): Promise<PostResponse> => {
-    const response = await fetch(`/api/posts?limit=${limit}&skip=${skip}`)
-    return response.json()
-  }
-
-  const fetchUsersAPI = async (): Promise<UserResponse> => {
-    const response = await fetch("/api/users?limit=0&select=username,image")
-    return response.json()
-  }
-
-  const searchPostsAPI = async (query: string): Promise<PostResponse> => {
-    const response = await fetch(`/api/posts/search?q=${query}`)
-    return response.json()
-  }
-
-  const fetchPostsByTagAPI = async (tag: string): Promise<PostResponse> => {
-    const response = await fetch(`/api/posts/tag/${tag}`)
-    return response.json()
-  }
-
-  const updatePostAPI = async (post: PostContent): Promise<PostContent> => {
-    const response = await fetch(`/api/posts/${post.id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(post),
-    })
-    return response.json()
-  }
-
-  const deletePostAPI = async (id: number): Promise<void> => {
-    await fetch(`/api/posts/${id}`, {
-      method: "DELETE",
-    })
-  }
-
-  const fetchCommentsAPI = async (postId: number): Promise<{ comments: Comment[] }> => {
-    const response = await fetch(`/api/comments/post/${postId}`)
-    return response.json()
-  }
-
-  const addCommentAPI = async (comment: { body: string; postId: number | null; userId: number }): Promise<Comment> => {
-    const response = await fetch("/api/comments/add", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(comment),
-    })
-    return response.json()
-  }
-
-  const updateCommentAPI = async (comment: Comment): Promise<Comment> => {
-    const response = await fetch(`/api/comments/${comment.id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ body: comment.body }),
-    })
-    return response.json()
-  }
-
-  const deleteCommentAPI = async (id: number): Promise<void> => {
-    await fetch(`/api/comments/${id}`, {
-      method: "DELETE",
-    })
-  }
-
-  const likeCommentAPI = async (id: number, likes: number): Promise<Comment> => {
-    const response = await fetch(`/api/comments/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ likes: likes + 1 }),
-    })
-    return response.json()
-  }
-
-  const fetchUserAPI = async (userId: number): Promise<UserProfile> => {
-    const response = await fetch(`/api/users/${userId}`)
-    return response.json()
   }
 
   const updatePostsState = (postsData: PostResponse, usersData: UserResponse) => {
@@ -362,13 +364,9 @@ export const PostWidget = () => {
   }
 
   useEffect(() => {
-    if (selectedTag) {
-      fetchPostsByTag(selectedTag)
-    } else {
-      fetchPosts()
-    }
+    fetchPosts()
     updateURL()
-  }, [skip, limit, sortBy, sortOrder, selectedTag])
+  }, [skip, limit, sortBy, sortOrder])
 
   // 하이라이트 함수 추가
   const highlightText = (text: string, highlight: string) => {
@@ -384,86 +382,6 @@ export const PostWidget = () => {
       </span>
     )
   }
-
-  // 게시물 테이블 렌더링
-  const renderPostTable = () => (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead className="w-[50px]">ID</TableHead>
-          <TableHead>제목</TableHead>
-          <TableHead className="w-[150px]">작성자</TableHead>
-          <TableHead className="w-[150px]">반응</TableHead>
-          <TableHead className="w-[150px]">작업</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {posts.map((post) => (
-          <TableRow key={post.id}>
-            <TableCell>{post.id}</TableCell>
-            <TableCell>
-              <div className="space-y-1">
-                <div>{highlightText(post.title, searchQuery)}</div>
-
-                <div className="flex flex-wrap gap-1">
-                  {post.tags?.map((tag) => (
-                    <span
-                      key={tag}
-                      className={`px-1 text-[9px] font-semibold rounded-[4px] cursor-pointer ${
-                        selectedTag === tag
-                          ? "text-white bg-blue-500 hover:bg-blue-600"
-                          : "text-blue-800 bg-blue-100 hover:bg-blue-200"
-                      }`}
-                      onClick={() => {
-                        setSelectedTag(tag)
-                        updateURL()
-                      }}
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </TableCell>
-            <TableCell>
-              <div className="flex items-center space-x-2 cursor-pointer" onClick={() => openUserModal(post.author)}>
-                <img src={post.author?.image} alt={post.author?.username} className="w-8 h-8 rounded-full" />
-                <span>{post.author?.username}</span>
-              </div>
-            </TableCell>
-            <TableCell>
-              <div className="flex items-center gap-2">
-                <ThumbsUp className="w-4 h-4" />
-                <span>{post.reactions?.likes || 0}</span>
-                <ThumbsDown className="w-4 h-4" />
-                <span>{post.reactions?.dislikes || 0}</span>
-              </div>
-            </TableCell>
-            <TableCell>
-              <div className="flex items-center gap-2">
-                <Button variant="ghost" size="sm" onClick={() => openPostDetail(post)}>
-                  <MessageSquare className="w-4 h-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setSelectedPost(post)
-                    setShowEditDialog(true)
-                  }}
-                >
-                  <Edit2 className="w-4 h-4" />
-                </Button>
-                <Button variant="ghost" size="sm" onClick={() => deletePost(post.id)}>
-                  <Trash2 className="w-4 h-4" />
-                </Button>
-              </div>
-            </TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
-  )
 
   // 댓글 렌더링
   const renderComments = (postId: number) => (
@@ -542,13 +460,77 @@ export const PostWidget = () => {
                 />
               </div>
             </div>
-            <TagFilter onChangeTag={onChangeTags} selectedTag={selectedTag} />
+            <TagFilter onChangeTag={onChangeTag} selectedTag={selectedTag} />
             <SortBy sortBy={sortBy} setSortBy={setSortBy} />
             <SortOrder sortOrder={sortOrder} setSortOrder={setSortOrder} />
           </div>
 
           {/* 게시물 테이블 */}
-          {loading ? <div className="flex justify-center p-4">로딩 중...</div> : renderPostTable()}
+          {loading ? (
+            <div className="flex justify-center p-4">로딩 중...</div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[50px]">ID</TableHead>
+                  <TableHead>제목</TableHead>
+                  <TableHead className="w-[150px]">작성자</TableHead>
+                  <TableHead className="w-[150px]">반응</TableHead>
+                  <TableHead className="w-[150px]">작업</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {posts.map((post) => (
+                  <TableRow key={post.id}>
+                    <TableCell>{post.id}</TableCell>
+                    <TableCell>
+                      <div className="space-y-1">
+                        <div>{highlightText(post.title, searchQuery)}</div>
+                        <PostTags tags={post.tags} onChangeTag={onChangeTag} selectedTag={selectedTag} />
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div
+                        className="flex items-center space-x-2 cursor-pointer"
+                        onClick={() => openUserModal(post.author)}
+                      >
+                        <img src={post.author?.image} alt={post.author?.username} className="w-8 h-8 rounded-full" />
+                        <span>{post.author?.username}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <ThumbsUp className="w-4 h-4" />
+                        <span>{post.reactions?.likes || 0}</span>
+                        <ThumbsDown className="w-4 h-4" />
+                        <span>{post.reactions?.dislikes || 0}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Button variant="ghost" size="sm" onClick={() => openPostDetail(post)}>
+                          <MessageSquare className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedPost(post)
+                            setShowEditDialog(true)
+                          }}
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => deletePost(post.id)}>
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
 
           {/* 페이지네이션 */}
           <Pagination limit={limit} setLimit={setLimit} skip={skip} setSkip={setSkip} total={total} />
