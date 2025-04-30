@@ -1,6 +1,3 @@
-import { useEffect, useState } from "react"
-import { Edit2, MessageSquare, Plus, Search, ThumbsDown, ThumbsUp, Trash2 } from "lucide-react"
-import { useLocation, useNavigate } from "react-router-dom"
 import {
   Button,
   Card,
@@ -25,7 +22,60 @@ import {
   TableRow,
   Textarea,
 } from "../../../shared/ui"
+import { Edit2, MessageSquare, Plus, Search, ThumbsDown, ThumbsUp, Trash2 } from "lucide-react"
+import { useEffect, useState } from "react"
+import { useLocation, useNavigate } from "react-router-dom"
+
 import { PostCreation } from "@/features/post/ui/PostCreation.tsx"
+
+export interface Post {
+  id: number
+  title: string
+  body: string
+  userId: number
+  tags?: string[]
+  reactions?: {
+    likes: number
+    dislikes: number
+  }
+  author?: User
+}
+
+export interface User {
+  id: number
+  username: string
+  image: string
+  firstName: string
+  lastName: string
+  age: number
+  email: string
+  phone: string
+  address: {
+    address: string
+    city: string
+    state: string
+  }
+  company: {
+    name: string
+    title: string
+  }
+}
+
+export interface Comment {
+  id: number
+  body: string
+  postId: number
+  userId: number
+  likes: number
+  user: {
+    username: string
+  }
+}
+
+export interface Tag {
+  url: string
+  slug: string
+}
 
 export const PostWidget = () => {
   const navigate = useNavigate()
@@ -33,28 +83,32 @@ export const PostWidget = () => {
   const queryParams = new URLSearchParams(location.search)
 
   // 상태 관리
-  const [posts, setPosts] = useState([])
-  const [total, setTotal] = useState(0)
-  const [skip, setSkip] = useState(parseInt(queryParams.get("skip") || "0"))
-  const [limit, setLimit] = useState(parseInt(queryParams.get("limit") || "10"))
-  const [searchQuery, setSearchQuery] = useState(queryParams.get("search") || "")
-  const [selectedPost, setSelectedPost] = useState(null)
-  const [sortBy, setSortBy] = useState(queryParams.get("sortBy") || "")
-  const [sortOrder, setSortOrder] = useState(queryParams.get("sortOrder") || "asc")
+  const [posts, setPosts] = useState<Post[]>([])
+  const [total, setTotal] = useState<number>(0)
+  const [skip, setSkip] = useState<number>(parseInt(queryParams.get("skip") || "0"))
+  const [limit, setLimit] = useState<number>(parseInt(queryParams.get("limit") || "10"))
+  const [searchQuery, setSearchQuery] = useState<string>(queryParams.get("search") || "")
+  const [selectedPost, setSelectedPost] = useState<Post | null>(null)
+  const [sortBy, setSortBy] = useState<string>(queryParams.get("sortBy") || "")
+  const [sortOrder, setSortOrder] = useState<string>(queryParams.get("sortOrder") || "asc")
 
-  const [showEditDialog, setShowEditDialog] = useState(false)
+  const [showEditDialog, setShowEditDialog] = useState<boolean>(false)
 
-  const [loading, setLoading] = useState(false)
-  const [tags, setTags] = useState([])
-  const [selectedTag, setSelectedTag] = useState(queryParams.get("tag") || "")
-  const [comments, setComments] = useState({})
-  const [selectedComment, setSelectedComment] = useState(null)
-  const [newComment, setNewComment] = useState({ body: "", postId: null, userId: 1 })
-  const [showAddCommentDialog, setShowAddCommentDialog] = useState(false)
-  const [showEditCommentDialog, setShowEditCommentDialog] = useState(false)
-  const [showPostDetailDialog, setShowPostDetailDialog] = useState(false)
-  const [showUserModal, setShowUserModal] = useState(false)
-  const [selectedUser, setSelectedUser] = useState(null)
+  const [loading, setLoading] = useState<boolean>(false)
+  const [tags, setTags] = useState<Tag[]>([])
+  const [selectedTag, setSelectedTag] = useState<string>(queryParams.get("tag") || "")
+  const [comments, setComments] = useState<Record<number, Comment[]>>({})
+  const [selectedComment, setSelectedComment] = useState<Comment | null>(null)
+  const [newComment, setNewComment] = useState<{ body: string; postId: number | null; userId: number }>({
+    body: "",
+    postId: null,
+    userId: 1,
+  })
+  const [showAddCommentDialog, setShowAddCommentDialog] = useState<boolean>(false)
+  const [showEditCommentDialog, setShowEditCommentDialog] = useState<boolean>(false)
+  const [showPostDetailDialog, setShowPostDetailDialog] = useState<boolean>(false)
+  const [showUserModal, setShowUserModal] = useState<boolean>(false)
+  const [selectedUser, setSelectedUser] = useState<User | null>(null)
 
   // URL 업데이트 함수
   const updateURL = () => {
