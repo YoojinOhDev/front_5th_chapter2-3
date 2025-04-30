@@ -21,7 +21,7 @@ import {
   TableHeader,
   TableRow,
   Textarea,
-} from "../../../shared/ui"
+} from "@/shared/ui"
 import { Edit2, MessageSquare, Plus, Search, ThumbsDown, ThumbsUp, Trash2 } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useLocation, useNavigate } from "react-router-dom"
@@ -96,34 +96,28 @@ export const PostWidget = () => {
   }
 
   // 게시물 가져오기
-  const fetchPosts = () => {
+  const fetchPosts = async () => {
     setLoading(true)
-    let postsData: PostResponse
-    let usersData: UserResponse
+    try {
+      const postsResponse = await fetch(`/api/posts?limit=${limit}&skip=${skip}`)
+      const postsData: PostResponse = await postsResponse.json()
 
-    fetch(`/api/posts?limit=${limit}&skip=${skip}`)
-      .then((response) => response.json())
-      .then((data: PostResponse) => {
-        postsData = data
-        return fetch("/api/users?limit=0&select=username,image")
-      })
-      .then((response) => response.json())
-      .then((users: UserResponse) => {
-        usersData = users
-        const postsWithUsers =
-          postsData.posts?.map((post: PostContent) => ({
-            ...post,
-            author: usersData.users?.find((user: UserProfile) => user.id === post.userId),
-          })) || []
-        setPosts(postsWithUsers)
-        setTotal(postsData.total || 0)
-      })
-      .catch((error) => {
-        console.error("게시물 가져오기 오류:", error)
-      })
-      .finally(() => {
-        setLoading(false)
-      })
+      const usersResponse = await fetch("/api/users?limit=0&select=username,image")
+      const usersData: UserResponse = await usersResponse.json()
+
+      const postsWithUsers =
+        postsData.posts?.map((post: PostContent) => ({
+          ...post,
+          author: usersData.users?.find((user: UserProfile) => user.id === post.userId),
+        })) || []
+
+      setPosts(postsWithUsers)
+      setTotal(postsData.total || 0)
+    } catch (error) {
+      console.error("게시물 가져오기 오류:", error)
+    } finally {
+      setLoading(false)
+    }
   }
 
   // 태그 가져오기

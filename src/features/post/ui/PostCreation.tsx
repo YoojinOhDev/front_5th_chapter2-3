@@ -22,8 +22,14 @@ export const PostCreation = ({ setPosts }: Props) => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newPost),
       })
-      const data = await response.json()
-      setPosts((posts) => [data as PostContent, ...posts])
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const data: PostContent = await response.json()
+
+      setPosts((prevPosts) => [data, ...prevPosts])
       setShowAddDialog(false)
       setNewPost(defaultNewPost)
     } catch (error) {
