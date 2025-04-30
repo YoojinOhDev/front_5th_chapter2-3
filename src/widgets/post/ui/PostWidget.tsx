@@ -8,6 +8,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  highlightText,
   Input,
   Table,
   TableBody,
@@ -17,7 +18,7 @@ import {
   TableRow,
   Textarea,
 } from "@/shared/ui"
-import { Edit2, MessageSquare, Plus, Search, ThumbsUp, Trash2 } from "lucide-react"
+import { Edit2, Plus, Search, ThumbsUp, Trash2 } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useLocation, useNavigate } from "react-router-dom"
 
@@ -32,6 +33,9 @@ import { Pagination } from "@/features/pagination/ui/Pagination.tsx"
 import { PostTags } from "@/features/postTags/ui/PostTags.tsx"
 import { PostAuthor } from "@/features/postAuthor/ui/PostTags.tsx"
 import { PostReactions } from "@/features/PostReactions/ui/PostReactions.tsx"
+import { PostEditButton } from "@/features/postEditor/ui/PostEditButton.tsx"
+import { PostDetailButton } from "@/features/postDetail/ui/PostDetailButton.tsx"
+import { PostDeleteButton } from "@/features/postDeleteButton/ui/PostDeleteButton.tsx"
 
 export interface NewComment {
   body: string
@@ -54,6 +58,7 @@ export interface Comment {
     username: string
   }
 }
+export type Comments = Record<number, Comment[]>
 
 export interface Tag {
   url: string
@@ -77,26 +82,6 @@ const searchPostsAPI = async (query: string): Promise<PostResponse> => {
 
 const fetchPostsByTagAPI = async (tag: string): Promise<PostResponse> => {
   const response = await fetch(`/api/posts/tag/${tag}`)
-  return response.json()
-}
-
-const updatePostAPI = async (post: PostContent): Promise<PostContent> => {
-  const response = await fetch(`/api/posts/${post.id}`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(post),
-  })
-  return response.json()
-}
-
-const deletePostAPI = async (id: number): Promise<void> => {
-  await fetch(`/api/posts/${id}`, {
-    method: "DELETE",
-  })
-}
-
-const fetchCommentsAPI = async (postId: number): Promise<{ comments: Comment[] }> => {
-  const response = await fetch(`/api/comments/post/${postId}`)
   return response.json()
 }
 
@@ -145,14 +130,13 @@ export const PostWidget = () => {
   const [limit, setLimit] = useState<number>(parseInt(queryParams.get("limit") || "10"))
 
   const [searchQuery, setSearchQuery] = useState<string>(queryParams.get("search") || "")
-  const [selectedPostForEdit, setSelectedPostForEdit] = useState<PostContent | null>(null)
-  const [selectedPostForDetail, setSelectedPostForDetail] = useState<PostContent | null>(null)
+
   const [sortBy, setSortBy] = useState<string>(queryParams.get("sortBy") || "")
   const [sortOrder, setSortOrder] = useState<string>(queryParams.get("sortOrder") || "asc")
   const [loading, setLoading] = useState<boolean>(false)
 
   const [selectedTag, setSelectedTag] = useState<string>(queryParams.get("tag") || "")
-  const [comments, setComments] = useState<Record<number, Comment[]>>({})
+  const [comments, setComments] = useState<Comments>({})
   const [selectedComment, setSelectedComment] = useState<Comment | null>(null)
   const [newComment, setNewComment] = useState<NewComment>(defaultNewComment)
 
@@ -186,10 +170,6 @@ export const PostWidget = () => {
 
     setPosts(postsWithUsers)
     setTotal(postsData.total ?? 0)
-  }
-
-  const updateCommentsState = (postId: number, newComments: Comment[]) => {
-    setComments((prev) => ({ ...prev, [postId]: newComments }))
   }
 
   const updateCommentState = (postId: number, updatedComment: Comment) => {
@@ -254,39 +234,6 @@ export const PostWidget = () => {
     setLoading(false)
   }
 
-  // 게시물 업데이트
-  const updatePost = async () => {
-    if (!selectedPostForEdit) return
-    try {
-      const data = await updatePostAPI(selectedPostForEdit)
-      setPosts(posts.map((post) => (post.id === data.id ? data : post)))
-      setSelectedPostForEdit(null)
-    } catch (error) {
-      console.error("게시물 업데이트 오류:", error)
-    }
-  }
-
-  // 게시물 삭제
-  const deletePost = async (id: number) => {
-    try {
-      await deletePostAPI(id)
-      setPosts(posts.filter((post) => post.id !== id))
-    } catch (error) {
-      console.error("게시물 삭제 오류:", error)
-    }
-  }
-
-  // 댓글 가져오기
-  const fetchComments = async (postId: number) => {
-    if (comments[postId]) return
-    try {
-      const data = await fetchCommentsAPI(postId)
-      updateCommentsState(postId, data.comments)
-    } catch (error) {
-      console.error("댓글 가져오기 오류:", error)
-    }
-  }
-
   // 댓글 추가
   const addComment = async () => {
     try {
@@ -337,31 +284,10 @@ export const PostWidget = () => {
     }
   }
 
-  // 게시물 상세 보기
-  const openPostDetail = (post: PostContent) => {
-    setSelectedPostForDetail(post)
-    fetchComments(post.id)
-  }
-
   useEffect(() => {
     fetchPosts()
     updateURL()
   }, [skip, limit, sortBy, sortOrder])
-
-  // 하이라이트 함수 추가
-  const highlightText = (text: string, highlight: string) => {
-    if (!text) return null
-    if (!highlight.trim()) {
-      return <span>{text}</span>
-    }
-    const regex = new RegExp(`(${highlight})`, "gi")
-    const parts = text.split(regex)
-    return (
-      <span>
-        {parts.map((part, i) => (regex.test(part) ? <mark key={i}>{part}</mark> : <span key={i}>{part}</span>))}
-      </span>
-    )
-  }
 
   // 댓글 렌더링
   const renderComments = (postId: number) => (
@@ -477,21 +403,15 @@ export const PostWidget = () => {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="sm" onClick={() => openPostDetail(post)}>
-                          <MessageSquare className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedPostForEdit(post)
-                          }}
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => deletePost(post.id)}>
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                        <PostDetailButton
+                          post={post}
+                          comments={comments}
+                          setComments={setComments}
+                          searchQuery={searchQuery}
+                          renderComments={renderComments}
+                        />
+                        <PostEditButton post={post} posts={posts} setPosts={setPosts} />
+                        <PostDeleteButton postId={post.id} posts={posts} setPosts={setPosts} />
                       </div>
                     </TableCell>
                   </TableRow>
@@ -504,35 +424,6 @@ export const PostWidget = () => {
           <Pagination limit={limit} setLimit={setLimit} skip={skip} setSkip={setSkip} total={total} />
         </div>
       </CardContent>
-
-      {/* 게시물 수정 대화상자 */}
-      <Dialog open={!!selectedPostForEdit} onOpenChange={(open) => !open && setSelectedPostForEdit(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>게시물 수정</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <Input
-              placeholder="제목"
-              value={selectedPostForEdit?.title || ""}
-              onChange={(e) => {
-                if (!selectedPostForEdit) return
-                setSelectedPostForEdit({ ...selectedPostForEdit, title: e.target.value })
-              }}
-            />
-            <Textarea
-              rows={15}
-              placeholder="내용"
-              value={selectedPostForEdit?.body || ""}
-              onChange={(e) => {
-                if (!selectedPostForEdit) return
-                setSelectedPostForEdit({ ...selectedPostForEdit, body: e.target.value })
-              }}
-            />
-            <Button onClick={updatePost}>게시물 업데이트</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* 댓글 추가 대화상자 */}
       <Dialog open={showAddCommentDialog} onOpenChange={setShowAddCommentDialog}>
@@ -567,19 +458,6 @@ export const PostWidget = () => {
               }}
             />
             <Button onClick={updateComment}>댓글 업데이트</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* 게시물 상세 보기 대화상자 */}
-      <Dialog open={!!selectedPostForDetail} onOpenChange={(open) => !open && setSelectedPostForDetail(null)}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle>{highlightText(selectedPostForDetail?.title || "", searchQuery)}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <p>{highlightText(selectedPostForDetail?.body || "", searchQuery)}</p>
-            {renderComments(selectedPostForDetail?.id || 0)}
           </div>
         </DialogContent>
       </Dialog>
