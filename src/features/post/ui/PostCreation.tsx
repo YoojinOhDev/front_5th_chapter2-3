@@ -1,8 +1,6 @@
 import { Plus } from "lucide-react"
 import { Dispatch, SetStateAction, useState } from "react"
-
 import { Button, Dialog, DialogContent, DialogHeader, DialogTitle, Input, Textarea } from "@/shared/ui"
-
 import { PostContent } from "../index.ts"
 
 interface Props {

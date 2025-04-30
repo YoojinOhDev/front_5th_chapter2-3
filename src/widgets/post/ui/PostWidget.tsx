@@ -9,11 +9,6 @@ import {
   DialogHeader,
   DialogTitle,
   Input,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
   Table,
   TableBody,
   TableCell,
@@ -28,15 +23,29 @@ import { useLocation, useNavigate } from "react-router-dom"
 
 import { PostCreation } from "@/features/post/ui/PostCreation.tsx"
 import { PostContent } from "@/features/post"
-import {UserProfile} from "@/entities/post/model/types.ts";
-import {PostResponse, UserResponse} from "@/features/post/model/types.ts";
+import { UserProfile } from "@/entities/post/model/types.ts"
+import { PostResponse, UserResponse } from "@/features/post/model/types.ts"
+import { TagFilter } from "@/features/tagFilter/ui/TagFilter.tsx"
+import { SortBy } from "@/features/sortBy/ui/SortBy.tsx"
+import { SortOrder } from "@/features/sortOrder/ui/SortOrder.tsx"
+import { Pagination } from "@/features/pagination/ui/Pagination.tsx"
 
+export interface NewComment {
+  body: string
+  postId: number | null
+  userId: number
+}
 
+const defaultNewComment: NewComment = {
+  body: "",
+  postId: null,
+  userId: 1,
+}
 export interface Comment {
-  id: number
   body: string
   postId: number
   userId: number
+  id: number
   likes: number
   user: {
     username: string
@@ -48,8 +57,6 @@ export interface Tag {
   slug: string
 }
 
-
-
 export const PostWidget = () => {
   const navigate = useNavigate()
   const location = useLocation()
@@ -60,28 +67,25 @@ export const PostWidget = () => {
   const [total, setTotal] = useState<number>(0)
   const [skip, setSkip] = useState<number>(parseInt(queryParams.get("skip") || "0"))
   const [limit, setLimit] = useState<number>(parseInt(queryParams.get("limit") || "10"))
+
   const [searchQuery, setSearchQuery] = useState<string>(queryParams.get("search") || "")
   const [selectedPost, setSelectedPost] = useState<PostContent | null>(null)
   const [sortBy, setSortBy] = useState<string>(queryParams.get("sortBy") || "")
   const [sortOrder, setSortOrder] = useState<string>(queryParams.get("sortOrder") || "asc")
-
-  const [showEditDialog, setShowEditDialog] = useState<boolean>(false)
-
   const [loading, setLoading] = useState<boolean>(false)
-  const [tags, setTags] = useState<Tag[]>([])
+
   const [selectedTag, setSelectedTag] = useState<string>(queryParams.get("tag") || "")
   const [comments, setComments] = useState<Record<number, Comment[]>>({})
   const [selectedComment, setSelectedComment] = useState<Comment | null>(null)
-  const [newComment, setNewComment] = useState<{ body: string; postId: number | null; userId: number }>({
-    body: "",
-    postId: null,
-    userId: 1,
-  })
+  const [newComment, setNewComment] = useState<NewComment>(defaultNewComment)
+
+  const [showUserModal, setShowUserModal] = useState<boolean>(false)
+  const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null)
+
+  const [showEditDialog, setShowEditDialog] = useState<boolean>(false)
   const [showAddCommentDialog, setShowAddCommentDialog] = useState<boolean>(false)
   const [showEditCommentDialog, setShowEditCommentDialog] = useState<boolean>(false)
   const [showPostDetailDialog, setShowPostDetailDialog] = useState<boolean>(false)
-  const [showUserModal, setShowUserModal] = useState<boolean>(false)
-  const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null)
 
   // URL 업데이트 함수
   const updateURL = () => {
@@ -95,6 +99,11 @@ export const PostWidget = () => {
     navigate(`?${params.toString()}`)
   }
 
+  function onChangeTags(value: string) {
+    setSelectedTag(value)
+    fetchPostsByTag(value)
+    updateURL()
+  }
   const fetchPostsAPI = async (limit: number, skip: number): Promise<PostResponse> => {
     const response = await fetch(`/api/posts?limit=${limit}&skip=${skip}`)
     return response.json()
@@ -102,11 +111,6 @@ export const PostWidget = () => {
 
   const fetchUsersAPI = async (): Promise<UserResponse> => {
     const response = await fetch("/api/users?limit=0&select=username,image")
-    return response.json()
-  }
-
-  const fetchTagsAPI = async (): Promise<Tag[]> => {
-    const response = await fetch("/api/posts/tags")
     return response.json()
   }
 
@@ -220,16 +224,6 @@ export const PostWidget = () => {
     }
   }
 
-  // 태그 가져오기
-  const fetchTags = async () => {
-    try {
-      const data = await fetchTagsAPI()
-      setTags(data)
-    } catch (error) {
-      console.error("태그 가져오기 오류:", error)
-    }
-  }
-
   // 게시물 검색
   const searchPosts = async () => {
     if (!searchQuery) {
@@ -240,8 +234,8 @@ export const PostWidget = () => {
     try {
       const data = await searchPostsAPI(searchQuery)
       if (data.posts && data.total) {
-      setPosts(data.posts)
-      setTotal(data.total)
+        setPosts(data.posts)
+        setTotal(data.total)
       }
     } catch (error) {
       console.error("게시물 검색 오류:", error)
@@ -307,7 +301,7 @@ export const PostWidget = () => {
         [data.postId]: [...(prev[data.postId] || []), data],
       }))
       setShowAddCommentDialog(false)
-      setNewComment({ body: "", postId: null, userId: 1 })
+      setNewComment(defaultNewComment)
     } catch (error) {
       console.error("댓글 추가 오류:", error)
     }
@@ -368,10 +362,6 @@ export const PostWidget = () => {
   }
 
   useEffect(() => {
-    fetchTags()
-  }, [])
-
-  useEffect(() => {
     if (selectedTag) {
       fetchPostsByTag(selectedTag)
     } else {
@@ -379,16 +369,6 @@ export const PostWidget = () => {
     }
     updateURL()
   }, [skip, limit, sortBy, sortOrder, selectedTag])
-
-  useEffect(() => {
-    const params = new URLSearchParams(location.search)
-    setSkip(parseInt(params.get("skip") || "0"))
-    setLimit(parseInt(params.get("limit") || "10"))
-    setSearchQuery(params.get("search") || "")
-    setSortBy(params.get("sortBy") || "")
-    setSortOrder(params.get("sortOrder") || "asc")
-    setSelectedTag(params.get("tag") || "")
-  }, [location.search])
 
   // 하이라이트 함수 추가
   const highlightText = (text: string, highlight: string) => {
@@ -562,76 +542,16 @@ export const PostWidget = () => {
                 />
               </div>
             </div>
-            <Select
-              value={selectedTag}
-              onValueChange={(value) => {
-                setSelectedTag(value)
-                fetchPostsByTag(value)
-                updateURL()
-              }}
-            >
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="태그 선택" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">모든 태그</SelectItem>
-                {tags.map((tag) => (
-                  <SelectItem key={tag.url} value={tag.slug}>
-                    {tag.slug}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="정렬 기준" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">없음</SelectItem>
-                <SelectItem value="id">ID</SelectItem>
-                <SelectItem value="title">제목</SelectItem>
-                <SelectItem value="reactions">반응</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={sortOrder} onValueChange={setSortOrder}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="정렬 순서" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="asc">오름차순</SelectItem>
-                <SelectItem value="desc">내림차순</SelectItem>
-              </SelectContent>
-            </Select>
+            <TagFilter onChangeTag={onChangeTags} selectedTag={selectedTag} />
+            <SortBy sortBy={sortBy} setSortBy={setSortBy} />
+            <SortOrder sortOrder={sortOrder} setSortOrder={setSortOrder} />
           </div>
 
           {/* 게시물 테이블 */}
           {loading ? <div className="flex justify-center p-4">로딩 중...</div> : renderPostTable()}
 
           {/* 페이지네이션 */}
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-2">
-              <span>표시</span>
-              <Select value={limit.toString()} onValueChange={(value) => setLimit(Number(value))}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="10" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="10">10</SelectItem>
-                  <SelectItem value="20">20</SelectItem>
-                  <SelectItem value="30">30</SelectItem>
-                </SelectContent>
-              </Select>
-              <span>항목</span>
-            </div>
-            <div className="flex gap-2">
-              <Button disabled={skip === 0} onClick={() => setSkip(Math.max(0, skip - limit))}>
-                이전
-              </Button>
-              <Button disabled={skip + limit >= total} onClick={() => setSkip(skip + limit)}>
-                다음
-              </Button>
-            </div>
-          </div>
+          <Pagination limit={limit} setLimit={setLimit} skip={skip} setSkip={setSkip} total={total} />
         </div>
       </CardContent>
 

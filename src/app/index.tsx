@@ -1,5 +1,4 @@
 import { BrowserRouter as Router } from "react-router-dom"
-import { Header, Footer } from "@/widgets"
 import {PostsManagerPage} from "@/pages/post/ui/PostsManagerPage.tsx"
 import React from "react"
 
@@ -7,13 +6,7 @@ const App = () => {
   return (
     <React.StrictMode>
       <Router>
-        <div className="flex flex-col min-h-screen">
-          <Header />
-          <main className="flex-grow container mx-auto px-4 py-8">
-            <PostsManagerPage />
-          </main>
-          <Footer />
-        </div>
+        <PostsManagerPage />
       </Router>
     </React.StrictMode>
   )
