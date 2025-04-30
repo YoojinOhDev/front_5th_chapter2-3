@@ -14,24 +14,33 @@ const defaultNewPost: PostContent = { id: 0, title: "", body: "", userId: 1 }
 export const PostCreation = ({ setPosts }: Props) => {
   const [newPost, setNewPost] = useState<PostContent>(defaultNewPost)
   const [showAddDialog, setShowAddDialog] = useState(false)
-  // 게시물 추가
-  const addPost = async () => {
+
+  // API 호출
+  const createPost = async (post: PostContent): Promise<PostContent> => {
+    const response = await fetch("/api/posts/add", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(post),
+    })
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    return response.json()
+  }
+
+  // 상태 업데이트
+  const updatePostsState = (newPost: PostContent) => {
+    setPosts((prevPosts) => [newPost, ...prevPosts])
+    setShowAddDialog(false)
+    setNewPost(defaultNewPost)
+  }
+
+  const handleAddPost = async () => {
     try {
-      const response = await fetch("/api/posts/add", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newPost),
-      })
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-
-      const data: PostContent = await response.json()
-
-      setPosts((prevPosts) => [data, ...prevPosts])
-      setShowAddDialog(false)
-      setNewPost(defaultNewPost)
+      const createdPost = await createPost(newPost)
+      updatePostsState(createdPost)
     } catch (error) {
       console.error("게시물 추가 오류:", error)
     }
@@ -67,7 +76,7 @@ export const PostCreation = ({ setPosts }: Props) => {
               value={newPost.userId}
               onChange={(e) => setNewPost({ ...newPost, userId: Number(e.target.value) })}
             />
-            <Button onClick={addPost}>게시물 추가</Button>
+            <Button onClick={handleAddPost}>게시물 추가</Button>
           </div>
         </DialogContent>
       </Dialog>

@@ -95,24 +95,124 @@ export const PostWidget = () => {
     navigate(`?${params.toString()}`)
   }
 
+  const fetchPostsAPI = async (limit: number, skip: number): Promise<PostResponse> => {
+    const response = await fetch(`/api/posts?limit=${limit}&skip=${skip}`)
+    return response.json()
+  }
+
+  const fetchUsersAPI = async (): Promise<UserResponse> => {
+    const response = await fetch("/api/users?limit=0&select=username,image")
+    return response.json()
+  }
+
+  const fetchTagsAPI = async (): Promise<Tag[]> => {
+    const response = await fetch("/api/posts/tags")
+    return response.json()
+  }
+
+  const searchPostsAPI = async (query: string): Promise<PostResponse> => {
+    const response = await fetch(`/api/posts/search?q=${query}`)
+    return response.json()
+  }
+
+  const fetchPostsByTagAPI = async (tag: string): Promise<PostResponse> => {
+    const response = await fetch(`/api/posts/tag/${tag}`)
+    return response.json()
+  }
+
+  const updatePostAPI = async (post: PostContent): Promise<PostContent> => {
+    const response = await fetch(`/api/posts/${post.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(post),
+    })
+    return response.json()
+  }
+
+  const deletePostAPI = async (id: number): Promise<void> => {
+    await fetch(`/api/posts/${id}`, {
+      method: "DELETE",
+    })
+  }
+
+  const fetchCommentsAPI = async (postId: number): Promise<{ comments: Comment[] }> => {
+    const response = await fetch(`/api/comments/post/${postId}`)
+    return response.json()
+  }
+
+  const addCommentAPI = async (comment: { body: string; postId: number | null; userId: number }): Promise<Comment> => {
+    const response = await fetch("/api/comments/add", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(comment),
+    })
+    return response.json()
+  }
+
+  const updateCommentAPI = async (comment: Comment): Promise<Comment> => {
+    const response = await fetch(`/api/comments/${comment.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ body: comment.body }),
+    })
+    return response.json()
+  }
+
+  const deleteCommentAPI = async (id: number): Promise<void> => {
+    await fetch(`/api/comments/${id}`, {
+      method: "DELETE",
+    })
+  }
+
+  const likeCommentAPI = async (id: number, likes: number): Promise<Comment> => {
+    const response = await fetch(`/api/comments/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ likes: likes + 1 }),
+    })
+    return response.json()
+  }
+
+  const fetchUserAPI = async (userId: number): Promise<UserProfile> => {
+    const response = await fetch(`/api/users/${userId}`)
+    return response.json()
+  }
+
+  const updatePostsState = (postsData: PostResponse, usersData: UserResponse) => {
+    const postsWithUsers =
+      postsData.posts?.map((post: PostContent) => ({
+        ...post,
+        author: usersData.users?.find((user: UserProfile) => user.id === post.userId),
+      })) || []
+
+    setPosts(postsWithUsers)
+    setTotal(postsData.total ?? 0)
+  }
+
+  const updateCommentsState = (postId: number, newComments: Comment[]) => {
+    setComments((prev) => ({ ...prev, [postId]: newComments }))
+  }
+
+  const updateCommentState = (postId: number, updatedComment: Comment) => {
+    setComments((prev) => ({
+      ...prev,
+      [postId]: prev[postId].map((comment) => (comment.id === updatedComment.id ? updatedComment : comment)),
+    }))
+  }
+
+  const deleteCommentState = (postId: number, commentId: number) => {
+    setComments((prev) => ({
+      ...prev,
+      [postId]: prev[postId].filter((comment) => comment.id !== commentId),
+    }))
+  }
+
   // 게시물 가져오기
   const fetchPosts = async () => {
     setLoading(true)
     try {
-      const postsResponse = await fetch(`/api/posts?limit=${limit}&skip=${skip}`)
-      const postsData: PostResponse = await postsResponse.json()
-
-      const usersResponse = await fetch("/api/users?limit=0&select=username,image")
-      const usersData: UserResponse = await usersResponse.json()
-
-      const postsWithUsers =
-        postsData.posts?.map((post: PostContent) => ({
-          ...post,
-          author: usersData.users?.find((user: UserProfile) => user.id === post.userId),
-        })) || []
-
-      setPosts(postsWithUsers)
-      setTotal(postsData.total || 0)
+      const [postsData, usersData] = await Promise.all([fetchPostsAPI(limit, skip), fetchUsersAPI()])
+      updatePostsState(postsData, usersData)
     } catch (error) {
       console.error("게시물 가져오기 오류:", error)
     } finally {
@@ -123,8 +223,7 @@ export const PostWidget = () => {
   // 태그 가져오기
   const fetchTags = async () => {
     try {
-      const response = await fetch("/api/posts/tags")
-      const data = await response.json()
+      const data = await fetchTagsAPI()
       setTags(data)
     } catch (error) {
       console.error("태그 가져오기 오류:", error)
@@ -139,10 +238,11 @@ export const PostWidget = () => {
     }
     setLoading(true)
     try {
-      const response = await fetch(`/api/posts/search?q=${searchQuery}`)
-      const data = await response.json()
+      const data = await searchPostsAPI(searchQuery)
+      if (data.posts && data.total) {
       setPosts(data.posts)
       setTotal(data.total)
+      }
     } catch (error) {
       console.error("게시물 검색 오류:", error)
     }
@@ -157,21 +257,8 @@ export const PostWidget = () => {
     }
     setLoading(true)
     try {
-      const [postsResponse, usersResponse] = await Promise.all([
-        fetch(`/api/posts/tag/${tag}`),
-        fetch("/api/users?limit=0&select=username,image"),
-      ])
-      const postsData: PostResponse = await postsResponse.json()
-      const usersData: UserResponse = await usersResponse.json()
-
-      const postsWithUsers =
-        postsData.posts?.map((post: PostContent) => ({
-          ...post,
-          author: usersData.users?.find((user: UserProfile) => user.id === post.userId),
-        })) || []
-
-      setPosts(postsWithUsers)
-      setTotal(postsData.total || 0)
+      const [postsData, usersData] = await Promise.all([fetchPostsByTagAPI(tag), fetchUsersAPI()])
+      updatePostsState(postsData, usersData)
     } catch (error) {
       console.error("태그별 게시물 가져오기 오류:", error)
     }
@@ -182,12 +269,7 @@ export const PostWidget = () => {
   const updatePost = async () => {
     if (!selectedPost) return
     try {
-      const response = await fetch(`/api/posts/${selectedPost.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(selectedPost),
-      })
-      const data = await response.json()
+      const data = await updatePostAPI(selectedPost)
       setPosts(posts.map((post) => (post.id === data.id ? data : post)))
       setShowEditDialog(false)
     } catch (error) {
@@ -198,9 +280,7 @@ export const PostWidget = () => {
   // 게시물 삭제
   const deletePost = async (id: number) => {
     try {
-      await fetch(`/api/posts/${id}`, {
-        method: "DELETE",
-      })
+      await deletePostAPI(id)
       setPosts(posts.filter((post) => post.id !== id))
     } catch (error) {
       console.error("게시물 삭제 오류:", error)
@@ -211,9 +291,8 @@ export const PostWidget = () => {
   const fetchComments = async (postId: number) => {
     if (comments[postId]) return
     try {
-      const response = await fetch(`/api/comments/post/${postId}`)
-      const data = await response.json()
-      setComments((prev) => ({ ...prev, [postId]: data.comments }))
+      const data = await fetchCommentsAPI(postId)
+      updateCommentsState(postId, data.comments)
     } catch (error) {
       console.error("댓글 가져오기 오류:", error)
     }
@@ -222,12 +301,7 @@ export const PostWidget = () => {
   // 댓글 추가
   const addComment = async () => {
     try {
-      const response = await fetch("/api/comments/add", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newComment),
-      })
-      const data = await response.json()
+      const data = await addCommentAPI(newComment)
       setComments((prev) => ({
         ...prev,
         [data.postId]: [...(prev[data.postId] || []), data],
@@ -243,16 +317,8 @@ export const PostWidget = () => {
   const updateComment = async () => {
     if (!selectedComment) return
     try {
-      const response = await fetch(`/api/comments/${selectedComment.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ body: selectedComment.body }),
-      })
-      const data = await response.json()
-      setComments((prev) => ({
-        ...prev,
-        [data.postId]: prev[data.postId].map((comment) => (comment.id === data.id ? data : comment)),
-      }))
+      const data = await updateCommentAPI(selectedComment)
+      updateCommentState(data.postId, data)
       setShowEditCommentDialog(false)
     } catch (error) {
       console.error("댓글 업데이트 오류:", error)
@@ -262,13 +328,8 @@ export const PostWidget = () => {
   // 댓글 삭제
   const deleteComment = async (id: number, postId: number) => {
     try {
-      await fetch(`/api/comments/${id}`, {
-        method: "DELETE",
-      })
-      setComments((prev) => ({
-        ...prev,
-        [postId]: prev[postId].filter((comment) => comment.id !== id),
-      }))
+      await deleteCommentAPI(id)
+      deleteCommentState(postId, id)
     } catch (error) {
       console.error("댓글 삭제 오류:", error)
     }
@@ -280,18 +341,8 @@ export const PostWidget = () => {
       const comment = comments[postId]?.find((c) => c.id === id)
       if (!comment) return
 
-      const response = await fetch(`/api/comments/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ likes: comment.likes + 1 }),
-      })
-      const data = await response.json()
-      setComments((prev) => ({
-        ...prev,
-        [postId]: prev[postId].map((comment) =>
-          comment.id === data.id ? { ...data, likes: comment.likes + 1 } : comment,
-        ),
-      }))
+      const data = await likeCommentAPI(id, comment.likes)
+      updateCommentState(postId, { ...data, likes: comment.likes + 1 })
     } catch (error) {
       console.error("댓글 좋아요 오류:", error)
     }
@@ -308,8 +359,7 @@ export const PostWidget = () => {
   const openUserModal = async (user: UserProfile | undefined) => {
     if (!user) return
     try {
-      const response = await fetch(`/api/users/${user.id}`)
-      const userData = await response.json()
+      const userData = await fetchUserAPI(user.id)
       setSelectedUser(userData)
       setShowUserModal(true)
     } catch (error) {
