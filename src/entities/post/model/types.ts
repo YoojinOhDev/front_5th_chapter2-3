@@ -1,4 +1,3 @@
-
 export interface UserProfile {
   id: number
   username: string
@@ -19,7 +18,6 @@ export interface UserProfile {
   }
 }
 
-
 export type PostContent = {
   id: number
   title: string
@@ -32,3 +30,16 @@ export type PostContent = {
   }
   author?: UserProfile
 }
+
+export interface Comment {
+  body: string
+  postId: number
+  userId: number
+  id: number
+  likes: number
+  user: {
+    username: string
+  }
+}
+
+export type Comments = Record<number, Comment[]>

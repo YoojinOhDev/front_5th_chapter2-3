@@ -12,12 +12,13 @@ import {
   TableRow,
 } from "@/shared/ui"
 import { useEffect, useState } from "react"
-import { useLocation, useNavigate } from "react-router-dom"
 
+import { useURLParams } from "@/shared/lib"
 import { PostCreation } from "@/features/post/ui/PostCreation.tsx"
 import { PostContent } from "@/features/post"
-import { UserProfile } from "@/entities/post/model/types.ts"
-import { PostResponse, UserResponse } from "@/features/post/model/types.ts"
+import { UserProfile, Comments } from "@/entities/post/model/types"
+import { fetchPostsAPI, fetchUsersAPI, searchPostsAPI, fetchPostsByTagAPI } from "@/features/post/api/postApi"
+import { PostResponse, UserResponse } from "@/features/post/model/types"
 import { TagFilter } from "@/features/tagFilter/ui/TagFilter.tsx"
 import { SortBy } from "@/features/sortBy/ui/SortBy.tsx"
 import { SortOrder } from "@/features/sortOrder/ui/SortOrder.tsx"
@@ -30,79 +31,30 @@ import { PostDetailButton } from "@/features/postDetail/ui/PostDetailButton.tsx"
 import { PostDeleteButton } from "@/features/postDeleteButton/ui/PostDeleteButton.tsx"
 import { PostSearch } from "@/features/postSearch/ui/PostSearch.tsx"
 
-export interface Comment {
-  body: string
-  postId: number
-  userId: number
-  id: number
-  likes: number
-  user: {
-    username: string
-  }
-}
-export type Comments = Record<number, Comment[]>
-
-export interface Tag {
-  url: string
-  slug: string
-}
-
-const fetchPostsAPI = async (limit: number, skip: number): Promise<PostResponse> => {
-  const response = await fetch(`/api/posts?limit=${limit}&skip=${skip}`)
-  return response.json()
-}
-
-const fetchUsersAPI = async (): Promise<UserResponse> => {
-  const response = await fetch("/api/users?limit=0&select=username,image")
-  return response.json()
-}
-
-const searchPostsAPI = async (query: string): Promise<PostResponse> => {
-  const response = await fetch(`/api/posts/search?q=${query}`)
-  return response.json()
-}
-
-const fetchPostsByTagAPI = async (tag: string): Promise<PostResponse> => {
-  const response = await fetch(`/api/posts/tag/${tag}`)
-  return response.json()
-}
-
 export const PostWidget = () => {
-  const navigate = useNavigate()
-  const location = useLocation()
-  const queryParams = new URLSearchParams(location.search)
+  const { getParam, updateURL } = useURLParams()
 
   // 상태 관리
   const [posts, setPosts] = useState<PostContent[]>([])
   const [total, setTotal] = useState<number>(0)
-  const [skip, setSkip] = useState<number>(parseInt(queryParams.get("skip") || "0"))
-  const [limit, setLimit] = useState<number>(parseInt(queryParams.get("limit") || "10"))
-
-  const [searchQuery, setSearchQuery] = useState<string>(queryParams.get("search") || "")
-
-  const [sortBy, setSortBy] = useState<string>(queryParams.get("sortBy") || "")
-  const [sortOrder, setSortOrder] = useState<string>(queryParams.get("sortOrder") || "asc")
+  const [skip, setSkip] = useState<number>(parseInt(getParam("skip", "0")))
+  const [limit, setLimit] = useState<number>(parseInt(getParam("limit", "10")))
+  const [searchQuery, setSearchQuery] = useState<string>(getParam("search"))
+  const [sortBy, setSortBy] = useState<string>(getParam("sortBy"))
+  const [sortOrder, setSortOrder] = useState<string>(getParam("sortOrder", "asc"))
   const [loading, setLoading] = useState<boolean>(false)
-
-  const [selectedTag, setSelectedTag] = useState<string>(queryParams.get("tag") || "")
+  const [selectedTag, setSelectedTag] = useState<string>(getParam("tag"))
   const [comments, setComments] = useState<Comments>({})
 
-  // URL 업데이트 함수
-  const updateURL = () => {
-    const params = new URLSearchParams()
-    if (skip) params.set("skip", skip.toString())
-    if (limit) params.set("limit", limit.toString())
-    if (searchQuery) params.set("search", searchQuery)
-    if (sortBy) params.set("sortBy", sortBy)
-    if (sortOrder) params.set("sortOrder", sortOrder)
-    if (selectedTag) params.set("tag", selectedTag)
-    navigate(`?${params.toString()}`)
-  }
-
-  function onChangeTag(value: string) {
-    setSelectedTag(value)
-    fetchPostsByTag(value)
-    updateURL()
+  const handleURLUpdate = () => {
+    updateURL({
+      skip: skip.toString(),
+      limit: limit.toString(),
+      search: searchQuery,
+      sortBy,
+      sortOrder,
+      tag: selectedTag,
+    })
   }
 
   const updatePostsState = (postsData: PostResponse, usersData: UserResponse) => {
@@ -164,9 +116,15 @@ export const PostWidget = () => {
     setLoading(false)
   }
 
+  const onChangeTag = (value: string) => {
+    setSelectedTag(value)
+    fetchPostsByTag(value)
+    handleURLUpdate()
+  }
+
   useEffect(() => {
     fetchPosts()
-    updateURL()
+    handleURLUpdate()
   }, [skip, limit, sortBy, sortOrder])
 
   return (
