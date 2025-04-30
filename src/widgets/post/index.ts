@@ -1,1 +1,1 @@
-export { Post } from "./ui/Post.tsx"
+export { PostWidget } from "./ui/PostWidget.tsx"

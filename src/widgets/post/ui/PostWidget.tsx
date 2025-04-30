@@ -27,7 +27,7 @@ import {
 } from "../../../shared/ui"
 import { PostCreation } from "@/features/post/ui/PostCreation.tsx"
 
-export const Post = () => {
+export const PostWidget = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const queryParams = new URLSearchParams(location.search)
