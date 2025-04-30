@@ -27,39 +27,10 @@ import { useEffect, useState } from "react"
 import { useLocation, useNavigate } from "react-router-dom"
 
 import { PostCreation } from "@/features/post/ui/PostCreation.tsx"
+import { PostContent } from "@/features/post"
+import {UserProfile} from "@/entities/post/model/types.ts";
+import {PostResponse, UserResponse} from "@/features/post/model/types.ts";
 
-export interface Post {
-  id: number
-  title: string
-  body: string
-  userId: number
-  tags?: string[]
-  reactions?: {
-    likes: number
-    dislikes: number
-  }
-  author?: User
-}
-
-export interface User {
-  id: number
-  username: string
-  image: string
-  firstName: string
-  lastName: string
-  age: number
-  email: string
-  phone: string
-  address: {
-    address: string
-    city: string
-    state: string
-  }
-  company: {
-    name: string
-    title: string
-  }
-}
 
 export interface Comment {
   id: number
@@ -77,18 +48,20 @@ export interface Tag {
   slug: string
 }
 
+
+
 export const PostWidget = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const queryParams = new URLSearchParams(location.search)
 
   // 상태 관리
-  const [posts, setPosts] = useState<Post[]>([])
+  const [posts, setPosts] = useState<PostContent[]>([])
   const [total, setTotal] = useState<number>(0)
   const [skip, setSkip] = useState<number>(parseInt(queryParams.get("skip") || "0"))
   const [limit, setLimit] = useState<number>(parseInt(queryParams.get("limit") || "10"))
   const [searchQuery, setSearchQuery] = useState<string>(queryParams.get("search") || "")
-  const [selectedPost, setSelectedPost] = useState<Post | null>(null)
+  const [selectedPost, setSelectedPost] = useState<PostContent | null>(null)
   const [sortBy, setSortBy] = useState<string>(queryParams.get("sortBy") || "")
   const [sortOrder, setSortOrder] = useState<string>(queryParams.get("sortOrder") || "asc")
 
@@ -108,7 +81,7 @@ export const PostWidget = () => {
   const [showEditCommentDialog, setShowEditCommentDialog] = useState<boolean>(false)
   const [showPostDetailDialog, setShowPostDetailDialog] = useState<boolean>(false)
   const [showUserModal, setShowUserModal] = useState<boolean>(false)
-  const [selectedUser, setSelectedUser] = useState<User | null>(null)
+  const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null)
 
   // URL 업데이트 함수
   const updateURL = () => {
@@ -125,24 +98,25 @@ export const PostWidget = () => {
   // 게시물 가져오기
   const fetchPosts = () => {
     setLoading(true)
-    let postsData
-    let usersData
+    let postsData: PostResponse
+    let usersData: UserResponse
 
     fetch(`/api/posts?limit=${limit}&skip=${skip}`)
       .then((response) => response.json())
-      .then((data) => {
+      .then((data: PostResponse) => {
         postsData = data
         return fetch("/api/users?limit=0&select=username,image")
       })
       .then((response) => response.json())
-      .then((users) => {
-        usersData = users.users
-        const postsWithUsers = postsData.posts.map((post) => ({
-          ...post,
-          author: usersData.find((user) => user.id === post.userId),
-        }))
+      .then((users: UserResponse) => {
+        usersData = users
+        const postsWithUsers =
+          postsData.posts?.map((post: PostContent) => ({
+            ...post,
+            author: usersData.users?.find((user: UserProfile) => user.id === post.userId),
+          })) || []
         setPosts(postsWithUsers)
-        setTotal(postsData.total)
+        setTotal(postsData.total || 0)
       })
       .catch((error) => {
         console.error("게시물 가져오기 오류:", error)
@@ -182,7 +156,7 @@ export const PostWidget = () => {
   }
 
   // 태그별 게시물 가져오기
-  const fetchPostsByTag = async (tag) => {
+  const fetchPostsByTag = async (tag: string) => {
     if (!tag || tag === "all") {
       fetchPosts()
       return
@@ -193,16 +167,17 @@ export const PostWidget = () => {
         fetch(`/api/posts/tag/${tag}`),
         fetch("/api/users?limit=0&select=username,image"),
       ])
-      const postsData = await postsResponse.json()
-      const usersData = await usersResponse.json()
+      const postsData: PostResponse = await postsResponse.json()
+      const usersData: UserResponse = await usersResponse.json()
 
-      const postsWithUsers = postsData.posts.map((post) => ({
-        ...post,
-        author: usersData.users.find((user) => user.id === post.userId),
-      }))
+      const postsWithUsers =
+        postsData.posts?.map((post: PostContent) => ({
+          ...post,
+          author: usersData.users?.find((user: UserProfile) => user.id === post.userId),
+        })) || []
 
       setPosts(postsWithUsers)
-      setTotal(postsData.total)
+      setTotal(postsData.total || 0)
     } catch (error) {
       console.error("태그별 게시물 가져오기 오류:", error)
     }
@@ -211,6 +186,7 @@ export const PostWidget = () => {
 
   // 게시물 업데이트
   const updatePost = async () => {
+    if (!selectedPost) return
     try {
       const response = await fetch(`/api/posts/${selectedPost.id}`, {
         method: "PUT",
@@ -226,7 +202,7 @@ export const PostWidget = () => {
   }
 
   // 게시물 삭제
-  const deletePost = async (id) => {
+  const deletePost = async (id: number) => {
     try {
       await fetch(`/api/posts/${id}`, {
         method: "DELETE",
@@ -238,8 +214,8 @@ export const PostWidget = () => {
   }
 
   // 댓글 가져오기
-  const fetchComments = async (postId) => {
-    if (comments[postId]) return // 이미 불러온 댓글이 있으면 다시 불러오지 않음
+  const fetchComments = async (postId: number) => {
+    if (comments[postId]) return
     try {
       const response = await fetch(`/api/comments/post/${postId}`)
       const data = await response.json()
@@ -271,6 +247,7 @@ export const PostWidget = () => {
 
   // 댓글 업데이트
   const updateComment = async () => {
+    if (!selectedComment) return
     try {
       const response = await fetch(`/api/comments/${selectedComment.id}`, {
         method: "PUT",
@@ -289,7 +266,7 @@ export const PostWidget = () => {
   }
 
   // 댓글 삭제
-  const deleteComment = async (id, postId) => {
+  const deleteComment = async (id: number, postId: number) => {
     try {
       await fetch(`/api/comments/${id}`, {
         method: "DELETE",
@@ -304,12 +281,15 @@ export const PostWidget = () => {
   }
 
   // 댓글 좋아요
-  const likeComment = async (id, postId) => {
+  const likeComment = async (id: number, postId: number) => {
     try {
+      const comment = comments[postId]?.find((c) => c.id === id)
+      if (!comment) return
+
       const response = await fetch(`/api/comments/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ likes: comments[postId].find((c) => c.id === id).likes + 1 }),
+        body: JSON.stringify({ likes: comment.likes + 1 }),
       })
       const data = await response.json()
       setComments((prev) => ({
@@ -324,14 +304,15 @@ export const PostWidget = () => {
   }
 
   // 게시물 상세 보기
-  const openPostDetail = (post) => {
+  const openPostDetail = (post: PostContent) => {
     setSelectedPost(post)
     fetchComments(post.id)
     setShowPostDetailDialog(true)
   }
 
   // 사용자 모달 열기
-  const openUserModal = async (user) => {
+  const openUserModal = async (user: UserProfile | undefined) => {
+    if (!user) return
     try {
       const response = await fetch(`/api/users/${user.id}`)
       const userData = await response.json()
@@ -461,7 +442,7 @@ export const PostWidget = () => {
   )
 
   // 댓글 렌더링
-  const renderComments = (postId) => (
+  const renderComments = (postId: number) => (
     <div className="mt-2">
       <div className="flex items-center justify-between mb-2">
         <h3 className="text-sm font-semibold">댓글</h3>
@@ -513,7 +494,12 @@ export const PostWidget = () => {
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           <span>게시물 관리자</span>
-          <PostCreation setPosts={setPosts} />
+          <PostCreation
+            setPosts={(posts) => {
+              const typedPosts = posts as PostContent[]
+              setPosts(typedPosts)
+            }}
+          />
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -615,13 +601,19 @@ export const PostWidget = () => {
             <Input
               placeholder="제목"
               value={selectedPost?.title || ""}
-              onChange={(e) => setSelectedPost({ ...selectedPost, title: e.target.value })}
+              onChange={(e) => {
+                if (!selectedPost) return
+                setSelectedPost({ ...selectedPost, title: e.target.value })
+              }}
             />
             <Textarea
               rows={15}
               placeholder="내용"
               value={selectedPost?.body || ""}
-              onChange={(e) => setSelectedPost({ ...selectedPost, body: e.target.value })}
+              onChange={(e) => {
+                if (!selectedPost) return
+                setSelectedPost({ ...selectedPost, body: e.target.value })
+              }}
             />
             <Button onClick={updatePost}>게시물 업데이트</Button>
           </div>
@@ -655,7 +647,10 @@ export const PostWidget = () => {
             <Textarea
               placeholder="댓글 내용"
               value={selectedComment?.body || ""}
-              onChange={(e) => setSelectedComment({ ...selectedComment, body: e.target.value })}
+              onChange={(e) => {
+                if (!selectedComment) return
+                setSelectedComment({ ...selectedComment, body: e.target.value })
+              }}
             />
             <Button onClick={updateComment}>댓글 업데이트</Button>
           </div>
@@ -666,11 +661,11 @@ export const PostWidget = () => {
       <Dialog open={showPostDetailDialog} onOpenChange={setShowPostDetailDialog}>
         <DialogContent className="max-w-3xl">
           <DialogHeader>
-            <DialogTitle>{highlightText(selectedPost?.title, searchQuery)}</DialogTitle>
+            <DialogTitle>{highlightText(selectedPost?.title || "", searchQuery)}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <p>{highlightText(selectedPost?.body, searchQuery)}</p>
-            {renderComments(selectedPost?.id)}
+            <p>{highlightText(selectedPost?.body || "", searchQuery)}</p>
+            {renderComments(selectedPost?.id || 0)}
           </div>
         </DialogContent>
       </Dialog>

@@ -82,7 +82,7 @@ describe("PostsManager", () => {
     const user = userEvent.setup()
     const NEW_POST = {
       id: TEST_POSTS.posts.length + 1,
-      title: "New Post",
+      title: "New PostContent",
       body: "This is a new post",
       userId: 1,
       tags: [],

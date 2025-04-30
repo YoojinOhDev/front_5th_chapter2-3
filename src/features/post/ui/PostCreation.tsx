@@ -1,13 +1,18 @@
-import { Button, Dialog, DialogContent, DialogHeader, DialogTitle, Input, Textarea } from "@/shared/ui"
 import { Plus } from "lucide-react"
 import { Dispatch, SetStateAction, useState } from "react"
-import { Post } from "../index.ts"
+
+import { Button, Dialog, DialogContent, DialogHeader, DialogTitle, Input, Textarea } from "@/shared/ui"
+
+import { PostContent } from "../index.ts"
 
 interface Props {
-  setPosts: Dispatch<SetStateAction<Post[]>>
+  setPosts: Dispatch<SetStateAction<PostContent[]>>
 }
+
+const defaultNewPost: PostContent = { id: 0, title: "", body: "", userId: 1 }
+
 export const PostCreation = ({ setPosts }: Props) => {
-  const [newPost, setNewPost] = useState<Post>({ title: "", body: "", userId: 1 })
+  const [newPost, setNewPost] = useState<PostContent>(defaultNewPost)
   const [showAddDialog, setShowAddDialog] = useState(false)
   // 게시물 추가
   const addPost = async () => {
@@ -18,9 +23,9 @@ export const PostCreation = ({ setPosts }: Props) => {
         body: JSON.stringify(newPost),
       })
       const data = await response.json()
-      setPosts((posts) => [data as Post, ...posts])
+      setPosts((posts) => [data as PostContent, ...posts])
       setShowAddDialog(false)
-      setNewPost({ title: "", body: "", userId: 1 })
+      setNewPost(defaultNewPost)
     } catch (error) {
       console.error("게시물 추가 오류:", error)
     }
