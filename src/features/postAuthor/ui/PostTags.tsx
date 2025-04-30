@@ -1,30 +1,66 @@
 import { PostContent } from "@/entities/post"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/shared/ui"
+import { useState } from "react"
+import { UserProfile } from "@/entities/post/model/types.ts"
 
 interface Props {
-  tags: PostContent["tags"]
-  onChangeTag: (tag: string) => void
-  selectedTag: string
+  post: PostContent
 }
-export const PostTags = ({ tags, onChangeTag, selectedTag }: Props) => {
-  if (!tags || tags.length === 0) return null
+const fetchUserAPI = async (userId: number): Promise<UserProfile> => {
+  const response = await fetch(`/api/users/${userId}`)
+  return response.json()
+}
 
+export const PostAuthor = ({ post }: Props) => {
+  const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null)
+  // 사용자 모달 열기
+  const openUserModal = async (user: UserProfile | undefined) => {
+    if (!user) return
+    try {
+      const userData = await fetchUserAPI(user.id)
+      setSelectedUser(userData)
+    } catch (error) {
+      console.error("사용자 정보 가져오기 오류:", error)
+    }
+  }
   return (
-    <div className="flex flex-wrap gap-1">
-      {tags.map((tag) => (
-        <span
-          key={tag}
-          className={`px-1 text-[9px] font-semibold rounded-[4px] cursor-pointer ${
-            selectedTag === tag
-              ? "text-white bg-blue-500 hover:bg-blue-600"
-              : "text-blue-800 bg-blue-100 hover:bg-blue-200"
-          }`}
-          onClick={() => {
-            onChangeTag(tag)
-          }}
-        >
-          {tag}
-        </span>
-      ))}
-    </div>
+    <>
+      <div className="flex items-center space-x-2 cursor-pointer" onClick={() => openUserModal(post.author)}>
+        <img src={post.author?.image} alt={post.author?.username} className="w-8 h-8 rounded-full" />
+        <span>{post.author?.username}</span>
+      </div>
+      <Dialog open={!!selectedUser} onOpenChange={(open) => !open && setSelectedUser(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>사용자 정보</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <img src={selectedUser?.image} alt={selectedUser?.username} className="w-24 h-24 rounded-full mx-auto" />
+            <h3 className="text-xl font-semibold text-center">{selectedUser?.username}</h3>
+            <div className="space-y-2">
+              <p>
+                <strong>이름:</strong> {selectedUser?.firstName} {selectedUser?.lastName}
+              </p>
+              <p>
+                <strong>나이:</strong> {selectedUser?.age}
+              </p>
+              <p>
+                <strong>이메일:</strong> {selectedUser?.email}
+              </p>
+              <p>
+                <strong>전화번호:</strong> {selectedUser?.phone}
+              </p>
+              <p>
+                <strong>주소:</strong> {selectedUser?.address?.address}, {selectedUser?.address?.city},{" "}
+                {selectedUser?.address?.state}
+              </p>
+              <p>
+                <strong>직장:</strong> {selectedUser?.company?.name} - {selectedUser?.company?.title}
+              </p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }
