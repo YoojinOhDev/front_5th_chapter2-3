@@ -11,14 +11,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/shared/ui"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 
 import { useURLParams } from "@/shared/lib"
 import { PostCreation } from "@/features/post/ui/PostCreation.tsx"
-import { PostContent } from "@/features/post"
-import { UserProfile, Comments } from "@/entities/post/model/types"
-import { fetchPostsAPI, fetchUsersAPI, searchPostsAPI, fetchPostsByTagAPI } from "@/features/post/api/postApi"
-import { PostResponse, UserResponse } from "@/features/post/model/types"
+import { usePosts } from "@/features/post/lib/usePosts.ts"
+import { useComments } from "@/features/post/lib/useComments.ts"
+import { useTagFilter } from "@/features/post/lib/useTagFilter.ts"
+import { usePaginationAndSort } from "@/features/post/lib/usePaginationAndSort.ts"
 import { TagFilter } from "@/features/tagFilter/ui/TagFilter.tsx"
 import { SortBy } from "@/features/sortBy/ui/SortBy.tsx"
 import { SortOrder } from "@/features/sortOrder/ui/SortOrder.tsx"
@@ -32,120 +32,44 @@ import { PostDeleteButton } from "@/features/postDeleteButton/ui/PostDeleteButto
 import { PostSearch } from "@/features/postSearch/ui/PostSearch.tsx"
 
 export const PostWidget = () => {
-  const { getParam, updateURL } = useURLParams()
-
-  // 상태 관리
-  const [posts, setPosts] = useState<PostContent[]>([])
-  const [total, setTotal] = useState<number>(0)
-  const [skip, setSkip] = useState<number>(parseInt(getParam("skip", "0")))
-  const [limit, setLimit] = useState<number>(parseInt(getParam("limit", "10")))
+  const { getParam } = useURLParams()
   const [searchQuery, setSearchQuery] = useState<string>(getParam("search"))
-  const [sortBy, setSortBy] = useState<string>(getParam("sortBy"))
-  const [sortOrder, setSortOrder] = useState<string>(getParam("sortOrder", "asc"))
-  const [loading, setLoading] = useState<boolean>(false)
-  const [selectedTag, setSelectedTag] = useState<string>(getParam("tag"))
-  const [comments, setComments] = useState<Comments>({})
 
-  const handleURLUpdate = () => {
-    updateURL({
-      skip: skip.toString(),
-      limit: limit.toString(),
-      search: searchQuery,
-      sortBy,
-      sortOrder,
-      tag: selectedTag,
+  const { skip, setSkip, limit, setLimit, sortBy, setSortBy, sortOrder, setSortOrder, handleURLUpdate } =
+    usePaginationAndSort({
+      onParamsChange: () => {
+        fetchPosts()
+      },
     })
+
+  const { posts, total, loading, fetchPosts, searchPosts, fetchPostsByTag, setPosts } = usePosts(skip, limit)
+  const { comments, setComments } = useComments()
+  const { selectedTag, onChangeTag } = useTagFilter(getParam("tag"))
+
+  const handleSearch = () => {
+    searchPosts(searchQuery)
+    handleURLUpdate({ search: searchQuery })
   }
 
-  const updatePostsState = (postsData: PostResponse, usersData: UserResponse) => {
-    const postsWithUsers =
-      postsData.posts?.map((post: PostContent) => ({
-        ...post,
-        author: usersData.users?.find((user: UserProfile) => user.id === post.userId),
-      })) || []
-
-    setPosts(postsWithUsers)
-    setTotal(postsData.total ?? 0)
-  }
-
-  // 게시물 가져오기
-  const fetchPosts = async () => {
-    setLoading(true)
-    try {
-      const [postsData, usersData] = await Promise.all([fetchPostsAPI(limit, skip), fetchUsersAPI()])
-      updatePostsState(postsData, usersData)
-    } catch (error) {
-      console.error("게시물 가져오기 오류:", error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  // 게시물 검색
-  const searchPosts = async () => {
-    if (!searchQuery) {
-      fetchPosts()
-      return
-    }
-    setLoading(true)
-    try {
-      const data = await searchPostsAPI(searchQuery)
-      if (data.posts && data.total) {
-        setPosts(data.posts)
-        setTotal(data.total)
-      }
-    } catch (error) {
-      console.error("게시물 검색 오류:", error)
-    }
-    setLoading(false)
-  }
-
-  // 태그별 게시물 가져오기
-  const fetchPostsByTag = async (tag: string) => {
-    if (!tag || tag === "all") {
-      fetchPosts()
-      return
-    }
-    setLoading(true)
-    try {
-      const [postsData, usersData] = await Promise.all([fetchPostsByTagAPI(tag), fetchUsersAPI()])
-      updatePostsState(postsData, usersData)
-    } catch (error) {
-      console.error("태그별 게시물 가져오기 오류:", error)
-    }
-    setLoading(false)
-  }
-
-  const onChangeTag = (value: string) => {
-    setSelectedTag(value)
+  const handleTagChange = (value: string) => {
+    onChangeTag(value)
     fetchPostsByTag(value)
-    handleURLUpdate()
   }
-
-  useEffect(() => {
-    fetchPosts()
-    handleURLUpdate()
-  }, [skip, limit, sortBy, sortOrder])
 
   return (
     <Card className="w-full max-w-6xl mx-auto">
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           <span>게시물 관리자</span>
-          <PostCreation
-            setPosts={(posts) => {
-              const typedPosts = posts as PostContent[]
-              setPosts(typedPosts)
-            }}
-          />
+          <PostCreation setPosts={setPosts} />
         </CardTitle>
       </CardHeader>
       <CardContent>
         <div className="flex flex-col gap-4">
           {/* 검색 및 필터 컨트롤 */}
           <div className="flex gap-4">
-            <PostSearch searchPosts={searchPosts} searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
-            <TagFilter onChangeTag={onChangeTag} selectedTag={selectedTag} />
+            <PostSearch searchPosts={handleSearch} searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
+            <TagFilter onChangeTag={handleTagChange} selectedTag={selectedTag} />
             <SortBy sortBy={sortBy} setSortBy={setSortBy} />
             <SortOrder sortOrder={sortOrder} setSortOrder={setSortOrder} />
           </div>
@@ -171,7 +95,7 @@ export const PostWidget = () => {
                     <TableCell>
                       <div className="space-y-1">
                         <div>{highlightText(post.title, searchQuery)}</div>
-                        <PostTags tags={post.tags} onChangeTag={onChangeTag} selectedTag={selectedTag} />
+                        <PostTags tags={post.tags} onChangeTag={handleTagChange} selectedTag={selectedTag} />
                       </div>
                     </TableCell>
                     <TableCell>
