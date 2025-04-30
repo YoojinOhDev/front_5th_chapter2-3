@@ -145,7 +145,8 @@ export const PostWidget = () => {
   const [limit, setLimit] = useState<number>(parseInt(queryParams.get("limit") || "10"))
 
   const [searchQuery, setSearchQuery] = useState<string>(queryParams.get("search") || "")
-  const [selectedPost, setSelectedPost] = useState<PostContent | null>(null)
+  const [selectedPostForEdit, setSelectedPostForEdit] = useState<PostContent | null>(null)
+  const [selectedPostForDetail, setSelectedPostForDetail] = useState<PostContent | null>(null)
   const [sortBy, setSortBy] = useState<string>(queryParams.get("sortBy") || "")
   const [sortOrder, setSortOrder] = useState<string>(queryParams.get("sortOrder") || "asc")
   const [loading, setLoading] = useState<boolean>(false)
@@ -155,10 +156,8 @@ export const PostWidget = () => {
   const [selectedComment, setSelectedComment] = useState<Comment | null>(null)
   const [newComment, setNewComment] = useState<NewComment>(defaultNewComment)
 
-  const [showEditDialog, setShowEditDialog] = useState<boolean>(false)
   const [showAddCommentDialog, setShowAddCommentDialog] = useState<boolean>(false)
   const [showEditCommentDialog, setShowEditCommentDialog] = useState<boolean>(false)
-  const [showPostDetailDialog, setShowPostDetailDialog] = useState<boolean>(false)
 
   // URL 업데이트 함수
   const updateURL = () => {
@@ -257,11 +256,11 @@ export const PostWidget = () => {
 
   // 게시물 업데이트
   const updatePost = async () => {
-    if (!selectedPost) return
+    if (!selectedPostForEdit) return
     try {
-      const data = await updatePostAPI(selectedPost)
+      const data = await updatePostAPI(selectedPostForEdit)
       setPosts(posts.map((post) => (post.id === data.id ? data : post)))
-      setShowEditDialog(false)
+      setSelectedPostForEdit(null)
     } catch (error) {
       console.error("게시물 업데이트 오류:", error)
     }
@@ -340,9 +339,8 @@ export const PostWidget = () => {
 
   // 게시물 상세 보기
   const openPostDetail = (post: PostContent) => {
-    setSelectedPost(post)
+    setSelectedPostForDetail(post)
     fetchComments(post.id)
-    setShowPostDetailDialog(true)
   }
 
   useEffect(() => {
@@ -486,8 +484,7 @@ export const PostWidget = () => {
                           variant="ghost"
                           size="sm"
                           onClick={() => {
-                            setSelectedPost(post)
-                            setShowEditDialog(true)
+                            setSelectedPostForEdit(post)
                           }}
                         >
                           <Edit2 className="w-4 h-4" />
@@ -509,7 +506,7 @@ export const PostWidget = () => {
       </CardContent>
 
       {/* 게시물 수정 대화상자 */}
-      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+      <Dialog open={!!selectedPostForEdit} onOpenChange={(open) => !open && setSelectedPostForEdit(null)}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>게시물 수정</DialogTitle>
@@ -517,19 +514,19 @@ export const PostWidget = () => {
           <div className="space-y-4">
             <Input
               placeholder="제목"
-              value={selectedPost?.title || ""}
+              value={selectedPostForEdit?.title || ""}
               onChange={(e) => {
-                if (!selectedPost) return
-                setSelectedPost({ ...selectedPost, title: e.target.value })
+                if (!selectedPostForEdit) return
+                setSelectedPostForEdit({ ...selectedPostForEdit, title: e.target.value })
               }}
             />
             <Textarea
               rows={15}
               placeholder="내용"
-              value={selectedPost?.body || ""}
+              value={selectedPostForEdit?.body || ""}
               onChange={(e) => {
-                if (!selectedPost) return
-                setSelectedPost({ ...selectedPost, body: e.target.value })
+                if (!selectedPostForEdit) return
+                setSelectedPostForEdit({ ...selectedPostForEdit, body: e.target.value })
               }}
             />
             <Button onClick={updatePost}>게시물 업데이트</Button>
@@ -575,14 +572,14 @@ export const PostWidget = () => {
       </Dialog>
 
       {/* 게시물 상세 보기 대화상자 */}
-      <Dialog open={showPostDetailDialog} onOpenChange={setShowPostDetailDialog}>
+      <Dialog open={!!selectedPostForDetail} onOpenChange={(open) => !open && setSelectedPostForDetail(null)}>
         <DialogContent className="max-w-3xl">
           <DialogHeader>
-            <DialogTitle>{highlightText(selectedPost?.title || "", searchQuery)}</DialogTitle>
+            <DialogTitle>{highlightText(selectedPostForDetail?.title || "", searchQuery)}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <p>{highlightText(selectedPost?.body || "", searchQuery)}</p>
-            {renderComments(selectedPost?.id || 0)}
+            <p>{highlightText(selectedPostForDetail?.body || "", searchQuery)}</p>
+            {renderComments(selectedPostForDetail?.id || 0)}
           </div>
         </DialogContent>
       </Dialog>
