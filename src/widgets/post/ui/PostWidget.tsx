@@ -158,7 +158,6 @@ export const PostWidget = () => {
   const [selectedComment, setSelectedComment] = useState<Comment | null>(null)
   const [newComment, setNewComment] = useState<NewComment>(defaultNewComment)
 
-  const [showUserModal, setShowUserModal] = useState<boolean>(false)
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null)
 
   const [showEditDialog, setShowEditDialog] = useState<boolean>(false)
@@ -357,7 +356,6 @@ export const PostWidget = () => {
     try {
       const userData = await fetchUserAPI(user.id)
       setSelectedUser(userData)
-      setShowUserModal(true)
     } catch (error) {
       console.error("사용자 정보 가져오기 오류:", error)
     }
@@ -617,7 +615,7 @@ export const PostWidget = () => {
       </Dialog>
 
       {/* 사용자 모달 */}
-      <Dialog open={showUserModal} onOpenChange={setShowUserModal}>
+      <Dialog open={!!selectedUser} onOpenChange={(open) => !open && setSelectedUser(null)}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>사용자 정보</DialogTitle>
