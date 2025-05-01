@@ -1,14 +1,28 @@
 import { useState } from "react"
 import { Comment, Comments } from "@/entities/post"
 import { NewComment, defaultNewComment } from "../model/types"
-import { addCommentAPI, updateCommentAPI, deleteCommentAPI, likeCommentAPI } from "../api/commentApi"
+import { updateCommentAPI, deleteCommentAPI, likeCommentAPI, useAddCommentMutation } from "../api/commentApi"
 
 // 공통 상태 관리 로직
 const useCommentState = (comments: Comments, setComments: (comments: Comments) => void) => {
-  const updateCommentState = (postId: number, updatedComment: Comment) => {
+  const addCommentState = (postId: number, newComment: Comment) => {
+    const newCommentProp = {
+      [postId]: [...(comments[postId] || []), newComment],
+    }
     setComments({
       ...comments,
+      ...newCommentProp,
+    })
+  }
+  const updateCommentState = (postId: number, updatedComment: Comment) => {
+    const newCommentProp = {
       [postId]: comments[postId].map((comment) => (comment.id === updatedComment.id ? updatedComment : comment)),
+    }
+    console.log(newCommentProp)
+
+    setComments({
+      ...comments,
+      ...newCommentProp,
     })
   }
 
@@ -20,6 +34,7 @@ const useCommentState = (comments: Comments, setComments: (comments: Comments) =
   }
 
   return {
+    addCommentState,
     updateCommentState,
     deleteCommentState,
   }
@@ -29,17 +44,20 @@ const useCommentState = (comments: Comments, setComments: (comments: Comments) =
 export const useAddComment = (comments: Comments, setComments: (comments: Comments) => void) => {
   const [newComment, setNewComment] = useState<NewComment>(defaultNewComment)
   const [showAddCommentDialog, setShowAddCommentDialog] = useState<boolean>(false)
-  const { updateCommentState } = useCommentState(comments, setComments)
+  const { addCommentState } = useCommentState(comments, setComments)
+  const { mutate: mutateNewComment } = useAddCommentMutation()
 
   const addComment = async () => {
-    try {
-      const data = await addCommentAPI(newComment)
-      updateCommentState(data.postId, data)
-      setShowAddCommentDialog(false)
-      setNewComment(defaultNewComment)
-    } catch (error) {
-      console.error("댓글 추가 오류:", error)
-    }
+    mutateNewComment(newComment, {
+      onSuccess: (data) => {
+        addCommentState(data.postId, data)
+        setShowAddCommentDialog(false)
+        setNewComment(defaultNewComment)
+      },
+      onError: (error) => {
+        console.error("댓글 추가 오류:", error)
+      },
+    })
   }
 
   return {
