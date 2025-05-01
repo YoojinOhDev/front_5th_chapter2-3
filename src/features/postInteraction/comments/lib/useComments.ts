@@ -1,7 +1,12 @@
 import { useState } from "react"
 import { Comment, Comments } from "@/entities/post"
 import { NewComment, defaultNewComment } from "../model/types"
-import { updateCommentAPI, deleteCommentAPI, likeCommentAPI, useAddCommentMutation } from "../api/commentApi"
+import {
+  likeCommentAPI,
+  useAddCommentMutation,
+  useDeleteCommentMutation,
+  useUpdateCommentMutation,
+} from "../api/commentApi"
 
 // 공통 상태 관리 로직
 const useCommentState = (comments: Comments, setComments: (comments: Comments) => void) => {
@@ -74,16 +79,20 @@ export const useEditComment = (comments: Comments, setComments: (comments: Comme
   const [selectedComment, setSelectedComment] = useState<Comment | null>(null)
   const [showEditCommentDialog, setShowEditCommentDialog] = useState<boolean>(false)
   const { updateCommentState } = useCommentState(comments, setComments)
+  const { mutate } = useUpdateCommentMutation()
 
   const updateComment = async () => {
     if (!selectedComment) return
-    try {
-      const data = await updateCommentAPI(selectedComment)
-      updateCommentState(data.postId, data)
-      setShowEditCommentDialog(false)
-    } catch (error) {
-      console.error("댓글 업데이트 오류:", error)
-    }
+    mutate(selectedComment, {
+      onSuccess: (data) => {
+        updateCommentState(data.postId, data)
+        setShowEditCommentDialog(false)
+        setSelectedComment(null)
+      },
+      onError: (error) => {
+        console.error("댓글 수정 오류:", error)
+      },
+    })
   }
 
   return {
@@ -98,14 +107,17 @@ export const useEditComment = (comments: Comments, setComments: (comments: Comme
 // 댓글 삭제 관련 로직
 export const useDeleteComment = (comments: Comments, setComments: (comments: Comments) => void) => {
   const { deleteCommentState } = useCommentState(comments, setComments)
+  const { mutate } = useDeleteCommentMutation()
 
   const deleteComment = async (id: number, postId: number) => {
-    try {
-      await deleteCommentAPI(id)
-      deleteCommentState(postId, id)
-    } catch (error) {
-      console.error("댓글 삭제 오류:", error)
-    }
+    mutate(id, {
+      onSuccess: () => {
+        deleteCommentState(postId, id)
+      },
+      onError: (error) => {
+        console.error("댓글 삭제 오류:", error)
+      },
+    })
   }
 
   return {
