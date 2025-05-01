@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { PostContent, UserProfile } from "@/entities/post/model/types.ts"
-import { PostResponse, UserResponse } from "../model/types"
-import { fetchPostsAPI, fetchUsersAPI, searchPostsAPI, fetchPostsByTagAPI } from "../api/postApi.ts"
+import { PostResponse, UserResponse } from "../model/types.ts"
+import { fetchPostsAPI, fetchUsersAPI, searchPostsAPI, fetchPostsByTagAPI } from "../api"
 
 export const usePosts = (skip: number, limit: number) => {
   const [posts, setPosts] = useState<PostContent[]>([])

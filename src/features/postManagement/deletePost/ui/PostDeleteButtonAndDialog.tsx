@@ -14,7 +14,7 @@ interface Props {
   setPosts: Dispatch<SetStateAction<PostContent[]>>
 }
 
-export const PostDeleteButton = ({ postId, posts, setPosts }: Props) => {
+export const PostDeleteButtonAndDialog = ({ postId, posts, setPosts }: Props) => {
   const deletePost = async (id: number) => {
     try {
       await deletePostAPI(id)

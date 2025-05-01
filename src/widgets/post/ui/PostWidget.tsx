@@ -13,23 +13,26 @@ import {
 } from "@/shared/ui"
 import { useState } from "react"
 
-import { useURLParams } from "@/shared/lib"
-import { PostCreation } from "@/features/post/ui/PostCreation.tsx"
-import { usePosts } from "@/features/post/lib/usePosts.ts"
-import { useComments } from "@/features/post/lib/useComments.ts"
-import { useTagFilter } from "@/features/post/lib/useTagFilter.ts"
-import { usePaginationAndSort } from "@/features/post/lib/usePaginationAndSort.ts"
-import { TagFilter } from "@/features/tagFilter/ui/TagFilter.tsx"
-import { SortBy } from "@/features/sortBy/ui/SortBy.tsx"
-import { SortOrder } from "@/features/sortOrder/ui/SortOrder.tsx"
-import { Pagination } from "@/features/pagination/ui/Pagination.tsx"
-import { PostTags } from "@/features/postTags/ui/PostTags.tsx"
-import { PostAuthor } from "@/features/postAuthor/ui/PostTags.tsx"
-import { PostReactions } from "@/features/PostReactions/ui/PostReactions.tsx"
-import { PostEditButton } from "@/features/postEditor/ui/PostEditButton.tsx"
-import { PostDetailButton } from "@/features/postDetail/ui/PostDetailButton.tsx"
-import { PostDeleteButton } from "@/features/postDeleteButton/ui/PostDeleteButton.tsx"
-import { PostSearch } from "@/features/postSearch/ui/PostSearch.tsx"
+import {
+  PostCreateButtonAndDialog,
+  PostEditButtonAndDialog,
+  PostDeleteButtonAndDialog,
+} from "@/features/postManagement"
+
+import {
+  PostAuthor,
+  PostDetailButton,
+  usePaginationAndSort,
+  useComments,
+  usePosts,
+  useTagFilter,
+} from "@/features/postView"
+
+import { PostSearch, SortOrder, SortBy, TagFilter } from "@/features/postFilter"
+
+import { PostReactions } from "@/features/postInteraction"
+
+import { PostTags, Pagination, useURLParams } from "@/shared"
 
 export const PostWidget = () => {
   const { getParam } = useURLParams()
@@ -61,7 +64,7 @@ export const PostWidget = () => {
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           <span>게시물 관리자</span>
-          <PostCreation setPosts={setPosts} />
+          <PostCreateButtonAndDialog setPosts={setPosts} />
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -112,8 +115,8 @@ export const PostWidget = () => {
                           setComments={setComments}
                           searchQuery={searchQuery}
                         />
-                        <PostEditButton post={post} posts={posts} setPosts={setPosts} />
-                        <PostDeleteButton postId={post.id} posts={posts} setPosts={setPosts} />
+                        <PostEditButtonAndDialog post={post} posts={posts} setPosts={setPosts} />
+                        <PostDeleteButtonAndDialog postId={post.id} posts={posts} setPosts={setPosts} />
                       </div>
                     </TableCell>
                   </TableRow>

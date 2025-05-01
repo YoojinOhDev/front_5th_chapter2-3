@@ -17,7 +17,7 @@ const updatePostAPI = async (post: PostContent): Promise<PostContent> => {
   return response.json()
 }
 
-export const PostEditButton = ({ post, posts, setPosts }: Props) => {
+export const PostEditButtonAndDialog = ({ post, posts, setPosts }: Props) => {
   const [selectedPostForEdit, setSelectedPostForEdit] = useState<PostContent | null>(null)
   const updatePost = async () => {
     if (!selectedPostForEdit) return

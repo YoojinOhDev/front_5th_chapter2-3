@@ -1,2 +1,0 @@
-export type { PostContent } from "@/entities/post/model/types.ts"
-export { PostCreation } from "./ui/PostCreation"

@@ -1,7 +1,7 @@
 import { Plus } from "lucide-react"
 import { Dispatch, SetStateAction, useState } from "react"
 import { Button, Dialog, DialogContent, DialogHeader, DialogTitle, Input, Textarea } from "@/shared/ui"
-import { PostContent } from "../index.ts"
+import { PostContent } from "@/entities/post"
 
 interface Props {
   setPosts: Dispatch<SetStateAction<PostContent[]>>
@@ -9,7 +9,7 @@ interface Props {
 
 const defaultNewPost: PostContent = { id: 0, title: "", body: "", userId: 1 }
 
-export const PostCreation = ({ setPosts }: Props) => {
+export const PostCreateButtonAndDialog = ({ setPosts }: Props) => {
   const [newPost, setNewPost] = useState<PostContent>(defaultNewPost)
   const [showAddDialog, setShowAddDialog] = useState(false)
 

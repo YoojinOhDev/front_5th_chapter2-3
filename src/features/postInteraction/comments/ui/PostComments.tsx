@@ -1,8 +1,7 @@
 import { Dispatch, SetStateAction, useState } from "react"
 import { Button, Dialog, DialogContent, DialogHeader, DialogTitle, highlightText, Textarea } from "@/shared/ui"
 import { Edit2, Plus, ThumbsUp, Trash2 } from "lucide-react"
-import { Comment, Comments } from "@/widgets/post/ui/PostWidget.tsx"
-import { PostContent } from "@/entities/post"
+import { PostContent, Comments, Comment } from "@/entities/post"
 
 const addCommentAPI = async (comment: { body: string; postId: number | null; userId: number }): Promise<Comment> => {
   const response = await fetch("/api/comments/add", {
