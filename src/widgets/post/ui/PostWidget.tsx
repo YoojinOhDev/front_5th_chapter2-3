@@ -42,11 +42,11 @@ export const PostWidget = () => {
   const { skip, setSkip, limit, setLimit, sortBy, setSortBy, sortOrder, setSortOrder, handleURLUpdate } =
     usePaginationAndSort({
       onParamsChange: () => {
-        fetchPosts()
+        refetchPosts()
       },
     })
 
-  const { posts, total, fetchPosts, searchPosts, fetchPostsByTag } = usePosts(skip, limit)
+  const { posts, total, refetchPosts, searchPosts, fetchPostsByTag } = usePosts(skip, limit)
   const { selectedTag, onChangeTag } = useTagFilter(getParam("tag"))
 
   const handleSearch = () => {

@@ -1,14 +1,18 @@
 import { useAtom } from "jotai"
 import { PostContent, UserProfile } from "@/entities/post/model/types.ts"
 import { PostResponse, UserResponse } from "../model/types.ts"
-import { fetchPostsAPI, fetchUsersAPI, searchPostsAPI, fetchPostsByTagAPI } from "../api"
+import { fetchUsersAPI, searchPostsAPI, fetchPostsByTagAPI, useFetchPosts, useFetchUsers } from "../api"
 import { postsState, totalPostsState, loadingState } from "@/entities/post/model/atoms"
+import { useEffect } from "react"
 
 export const usePosts = (skip: number, limit: number) => {
   const [posts, setPosts] = useAtom(postsState)
   const [total, setTotal] = useAtom(totalPostsState)
   const [loading, setLoading] = useAtom(loadingState)
 
+  const { data: postsData, isLoading: isFetchPostLoading, refetch: refetchPosts } = useFetchPosts(limit, skip)
+  const { data: usersData, isLoading: isFetchUsersLoading } = useFetchUsers()
+  setLoading(isFetchPostLoading || isFetchUsersLoading)
   const updatePostsState = (postsData: PostResponse, usersData: UserResponse) => {
     const postsWithUsers =
       postsData.posts?.map((post: PostContent) => ({
@@ -20,21 +24,14 @@ export const usePosts = (skip: number, limit: number) => {
     setTotal(postsData.total ?? 0)
   }
 
-  const fetchPosts = async () => {
-    setLoading(true)
-    try {
-      const [postsData, usersData] = await Promise.all([fetchPostsAPI(limit, skip), fetchUsersAPI()])
-      updatePostsState(postsData, usersData)
-    } catch (error) {
-      console.error("게시물 가져오기 오류:", error)
-    } finally {
-      setLoading(false)
-    }
-  }
+  useEffect(() => {
+    if (!postsData || !usersData) return
+    updatePostsState(postsData, usersData)
+  }, [postsData, usersData])
 
   const searchPosts = async (query: string) => {
     if (!query) {
-      fetchPosts()
+      await refetchPosts()
       return
     }
     setLoading(true)
@@ -52,7 +49,7 @@ export const usePosts = (skip: number, limit: number) => {
 
   const fetchPostsByTag = async (tag: string) => {
     if (!tag || tag === "all") {
-      fetchPosts()
+      await refetchPosts()
       return
     }
     setLoading(true)
@@ -65,5 +62,5 @@ export const usePosts = (skip: number, limit: number) => {
     setLoading(false)
   }
 
-  return { posts, total, loading, fetchPosts, searchPosts, fetchPostsByTag, setPosts }
+  return { posts, total, loading, searchPosts, refetchPosts, fetchPostsByTag, setPosts }
 }

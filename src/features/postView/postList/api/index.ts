@@ -1,4 +1,5 @@
 import { PostResponse, UserResponse } from "../model/types.ts"
+import { useQuery } from "@tanstack/react-query"
 
 export const fetchPostsAPI = async (limit: number, skip: number): Promise<PostResponse> => {
   const response = await fetch(`/api/posts?limit=${limit}&skip=${skip}`)
@@ -18,4 +19,30 @@ export const searchPostsAPI = async (query: string): Promise<PostResponse> => {
 export const fetchPostsByTagAPI = async (tag: string): Promise<PostResponse> => {
   const response = await fetch(`/api/posts/tag/${tag}`)
   return response.json()
+}
+
+export const useFetchPosts = (limit: number, skip: number) => {
+  const query = useQuery<PostResponse | undefined>({
+    queryKey: ["posts", limit, skip],
+    queryFn: () => fetchPostsAPI(limit, skip),
+  })
+
+  if (query.error) {
+    console.error("게시물 가져오기 오류:", query.error)
+  }
+
+  return query
+}
+
+export const useFetchUsers = () => {
+  const query = useQuery<UserResponse | undefined>({
+    queryKey: ["users"],
+    queryFn: () => fetchUsersAPI(),
+  })
+
+  if (query.error) {
+    console.error("유저 정보 가져오기 오류:", query.error)
+  }
+
+  return query
 }
