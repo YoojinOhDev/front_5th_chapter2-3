@@ -2,9 +2,9 @@ import { useState } from "react"
 import { Comment, Comments } from "@/entities/post"
 import { NewComment, defaultNewComment } from "../model/types"
 import {
-  likeCommentAPI,
   useAddCommentMutation,
   useDeleteCommentMutation,
+  useLikeCommentMutation,
   useUpdateCommentMutation,
 } from "../api/commentApi"
 
@@ -23,7 +23,6 @@ const useCommentState = (comments: Comments, setComments: (comments: Comments) =
     const newCommentProp = {
       [postId]: comments[postId].map((comment) => (comment.id === updatedComment.id ? updatedComment : comment)),
     }
-    console.log(newCommentProp)
 
     setComments({
       ...comments,
@@ -128,17 +127,23 @@ export const useDeleteComment = (comments: Comments, setComments: (comments: Com
 // 댓글 좋아요 관련 로직
 export const useLikeComment = (comments: Comments, setComments: (comments: Comments) => void) => {
   const { updateCommentState } = useCommentState(comments, setComments)
+  const { mutate } = useLikeCommentMutation()
 
   const likeComment = async (id: number, postId: number) => {
-    try {
-      const comment = comments[postId]?.find((c) => c.id === id)
-      if (!comment) return
+    const comment = comments[postId]?.find((c) => c.id === id)
+    if (!comment) return
 
-      const data = await likeCommentAPI(id, comment.likes)
-      updateCommentState(postId, { ...data, likes: comment.likes + 1 })
-    } catch (error) {
-      console.error("댓글 좋아요 오류:", error)
-    }
+    mutate(
+      { id: id, likes: comment.likes },
+      {
+        onSuccess: (data) => {
+          updateCommentState(postId, { ...data, likes: comment.likes + 1 })
+        },
+        onError: (error) => {
+          console.error("댓글 좋아요 오류:", error)
+        },
+      },
+    )
   }
 
   return {
