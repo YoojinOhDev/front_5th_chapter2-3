@@ -46,8 +46,8 @@ export const PostWidget = () => {
       },
     })
 
-  const { posts, total, refetchPosts, searchPosts, fetchPostsByTag } = usePosts(skip, limit)
   const { selectedTag, onChangeTag } = useTagFilter(getParam("tag"))
+  const { posts, total, refetchPosts, searchPosts } = usePosts(skip, limit, selectedTag)
 
   const handleSearch = () => {
     searchPosts(searchQuery)
@@ -56,7 +56,6 @@ export const PostWidget = () => {
 
   const handleTagChange = (value: string) => {
     onChangeTag(value)
-    fetchPostsByTag(value)
   }
 
   return (

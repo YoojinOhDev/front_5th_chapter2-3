@@ -21,10 +21,25 @@ export const fetchPostsByTagAPI = async (tag: string): Promise<PostResponse> => 
   return response.json()
 }
 
-export const useFetchPosts = (limit: number, skip: number) => {
+export const useFetchPosts = (limit: number, skip: number, selectedTag: string | undefined) => {
   const query = useQuery<PostResponse | undefined>({
-    queryKey: ["posts", limit, skip],
+    queryKey: ["posts", limit, skip, selectedTag],
     queryFn: () => fetchPostsAPI(limit, skip),
+    enabled: !selectedTag || selectedTag === "all",
+  })
+
+  if (query.error) {
+    console.error("게시물 가져오기 오류:", query.error)
+  }
+
+  return query
+}
+
+export const useFetchPostsByTag = (tag: string | undefined) => {
+  const query = useQuery<PostResponse | undefined>({
+    queryKey: ["posts", tag],
+    queryFn: () => fetchPostsByTagAPI(tag as string),
+    enabled: !!tag && tag !== "all",
   })
 
   if (query.error) {
