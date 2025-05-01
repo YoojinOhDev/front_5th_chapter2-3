@@ -1,12 +1,13 @@
-import { useState } from "react"
+import { useAtom } from "jotai"
 import { PostContent, UserProfile } from "@/entities/post/model/types.ts"
 import { PostResponse, UserResponse } from "../model/types.ts"
 import { fetchPostsAPI, fetchUsersAPI, searchPostsAPI, fetchPostsByTagAPI } from "../api"
+import { postsState, totalPostsState, loadingState } from "@/entities/post/model/atoms"
 
 export const usePosts = (skip: number, limit: number) => {
-  const [posts, setPosts] = useState<PostContent[]>([])
-  const [total, setTotal] = useState<number>(0)
-  const [loading, setLoading] = useState<boolean>(false)
+  const [posts, setPosts] = useAtom(postsState)
+  const [total, setTotal] = useAtom(totalPostsState)
+  const [loading, setLoading] = useAtom(loadingState)
 
   const updatePostsState = (postsData: PostResponse, usersData: UserResponse) => {
     const postsWithUsers =

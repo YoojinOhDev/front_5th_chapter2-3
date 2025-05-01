@@ -1,13 +1,13 @@
-import { Dispatch, SetStateAction, useState } from "react"
+import { useState } from "react"
 import { MessageSquare } from "lucide-react"
-import { PostContent, Comments, Comment } from "@/entities/post"
+import { PostContent, Comment } from "@/entities/post"
 import { Button, Dialog, DialogContent, DialogHeader, DialogTitle, highlightText } from "@/shared/ui"
 import { PostComments } from "@/features/postInteraction"
+import { useAtom } from "jotai"
+import { commentsState } from "@/entities/post/model/atoms"
 
 interface Props {
   post: PostContent
-  comments: Comments
-  setComments: Dispatch<SetStateAction<Comments>>
   searchQuery: string
 }
 
@@ -16,8 +16,10 @@ const fetchCommentsAPI = async (postId: number): Promise<{ comments: Comment[] }
   return response.json()
 }
 
-export const PostDetailButtonAndDialog = ({ post, comments, setComments, searchQuery }: Props) => {
+export const PostDetailButtonAndDialog = ({ post, searchQuery }: Props) => {
   const [selectedPostForDetail, setSelectedPostForDetail] = useState<PostContent | null>(null)
+  const [comments, setComments] = useAtom(commentsState)
+
   const updateCommentsState = (postId: number, newComments: Comment[]) => {
     setComments((prev) => ({ ...prev, [postId]: newComments }))
   }
@@ -50,12 +52,7 @@ export const PostDetailButtonAndDialog = ({ post, comments, setComments, searchQ
           </DialogHeader>
           <div className="space-y-4">
             <p>{highlightText(selectedPostForDetail?.body || "", searchQuery)}</p>
-            <PostComments
-              postId={selectedPostForDetail?.id || 0}
-              setComments={setComments}
-              comments={comments}
-              searchQuery={searchQuery}
-            />
+            <PostComments postId={selectedPostForDetail?.id || 0} searchQuery={searchQuery} />
           </div>
         </DialogContent>
       </Dialog>

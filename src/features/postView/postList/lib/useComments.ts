@@ -1,8 +1,9 @@
-import { useState } from "react"
-import { Comment, Comments } from "@/entities/post/model/types.ts"
+import { useAtom } from "jotai"
+import { Comment } from "@/entities/post/model/types.ts"
+import { commentsState } from "@/entities/post/model/atoms"
 
 export const useComments = () => {
-  const [comments, setComments] = useState<Comments>({})
+  const [comments, setComments] = useAtom(commentsState)
 
   const addComment = (postId: number, comment: Comment) => {
     setComments((prev) => ({

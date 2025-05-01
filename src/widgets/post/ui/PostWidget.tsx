@@ -14,30 +14,31 @@ import {
 import { useState } from "react"
 
 import {
-  PostCreateButtonAndDialog,
   PostEditButtonAndDialog,
   PostDeleteButtonAndDialog,
+  PostCreateButtonAndDialog,
 } from "@/features/postManagement"
 
 import {
   PostAuthor,
   PostDetailButtonAndDialog,
   usePaginationAndSort,
-  useComments,
   usePosts,
   useTagFilter,
 } from "@/features/postView"
 
-import { PostSearch, SortOrder, SortBy, TagFilter } from "@/features/postFilter"
+import { PostSearch, SortBy, SortOrder, TagFilter } from "@/features/postFilter"
 
 import { PostReactions } from "@/features/postInteraction"
 
 import { PostTags, Pagination, useURLParams } from "@/shared"
+import { useAtom } from "jotai"
+import { loadingState } from "@/entities/post/model/atoms.ts"
 
 export const PostWidget = () => {
   const { getParam } = useURLParams()
   const [searchQuery, setSearchQuery] = useState<string>(getParam("search"))
-
+  const [loading] = useAtom(loadingState)
   const { skip, setSkip, limit, setLimit, sortBy, setSortBy, sortOrder, setSortOrder, handleURLUpdate } =
     usePaginationAndSort({
       onParamsChange: () => {
@@ -45,8 +46,7 @@ export const PostWidget = () => {
       },
     })
 
-  const { posts, total, loading, fetchPosts, searchPosts, fetchPostsByTag, setPosts } = usePosts(skip, limit)
-  const { comments, setComments } = useComments()
+  const { posts, total, fetchPosts, searchPosts, fetchPostsByTag } = usePosts(skip, limit)
   const { selectedTag, onChangeTag } = useTagFilter(getParam("tag"))
 
   const handleSearch = () => {
@@ -64,7 +64,7 @@ export const PostWidget = () => {
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           <span>게시물 관리자</span>
-          <PostCreateButtonAndDialog setPosts={setPosts} />
+          <PostCreateButtonAndDialog />
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -109,14 +109,9 @@ export const PostWidget = () => {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <PostDetailButtonAndDialog
-                          post={post}
-                          comments={comments}
-                          setComments={setComments}
-                          searchQuery={searchQuery}
-                        />
-                        <PostEditButtonAndDialog post={post} posts={posts} setPosts={setPosts} />
-                        <PostDeleteButtonAndDialog postId={post.id} posts={posts} setPosts={setPosts} />
+                        <PostDetailButtonAndDialog post={post} searchQuery={searchQuery} />
+                        <PostEditButtonAndDialog post={post} />
+                        <PostDeleteButtonAndDialog postId={post.id} />
                       </div>
                     </TableCell>
                   </TableRow>

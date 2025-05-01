@@ -1,15 +1,14 @@
 import { Plus } from "lucide-react"
-import { Dispatch, SetStateAction, useState } from "react"
+import { useState } from "react"
 import { Button, Dialog, DialogContent, DialogHeader, DialogTitle, Input, Textarea } from "@/shared/ui"
 import { PostContent } from "@/entities/post"
-
-interface Props {
-  setPosts: Dispatch<SetStateAction<PostContent[]>>
-}
+import { useAtom } from "jotai"
+import { postsState } from "@/entities/post/model/atoms.ts"
 
 const defaultNewPost: PostContent = { id: 0, title: "", body: "", userId: 1 }
 
-export const PostCreateButtonAndDialog = ({ setPosts }: Props) => {
+export const PostCreateButtonAndDialog = () => {
+  const [, setPosts] = useAtom(postsState)
   const [newPost, setNewPost] = useState<PostContent>(defaultNewPost)
   const [showAddDialog, setShowAddDialog] = useState(false)
 

@@ -1,9 +1,17 @@
 import { Button, Dialog, DialogContent, DialogHeader, DialogTitle, highlightText, Textarea } from "@/shared/ui"
 import { Edit2, Plus, ThumbsUp, Trash2 } from "lucide-react"
-import { PostCommentsProps } from "../model/types"
+import { useAtom } from "jotai"
+import { commentsState } from "@/entities/post/model/atoms"
 import { useAddComment, useEditComment, useDeleteComment, useLikeComment } from "../lib/useComments"
 
-export const PostComments = ({ postId, comments, setComments, searchQuery }: PostCommentsProps) => {
+interface PostCommentsProps {
+  postId: number
+  searchQuery: string
+}
+
+export const PostComments = ({ postId, searchQuery }: PostCommentsProps) => {
+  const [comments, setComments] = useAtom(commentsState)
+
   const { newComment, setNewComment, showAddCommentDialog, setShowAddCommentDialog, addComment } = useAddComment(
     comments,
     setComments,

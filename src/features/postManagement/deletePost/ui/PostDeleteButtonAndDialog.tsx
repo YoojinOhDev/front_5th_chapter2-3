@@ -1,7 +1,8 @@
 import { PostContent } from "@/entities/post"
 import { Button } from "@/shared/ui"
 import { Trash2 } from "lucide-react"
-import { Dispatch, SetStateAction } from "react"
+import { useAtom } from "jotai"
+import { postsState } from "@/entities/post/model/atoms.ts"
 
 const deletePostAPI = async (id: number): Promise<void> => {
   await fetch(`/api/posts/${id}`, {
@@ -10,11 +11,11 @@ const deletePostAPI = async (id: number): Promise<void> => {
 }
 interface Props {
   postId: PostContent["id"]
-  posts: PostContent[]
-  setPosts: Dispatch<SetStateAction<PostContent[]>>
 }
 
-export const PostDeleteButtonAndDialog = ({ postId, posts, setPosts }: Props) => {
+export const PostDeleteButtonAndDialog = ({ postId }: Props) => {
+  const [posts, setPosts] = useAtom(postsState)
+
   const deletePost = async (id: number) => {
     try {
       await deletePostAPI(id)
