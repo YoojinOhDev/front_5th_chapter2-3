@@ -16,7 +16,7 @@ const fetchCommentsAPI = async (postId: number): Promise<{ comments: Comment[] }
   return response.json()
 }
 
-export const PostDetailButton = ({ post, comments, setComments, searchQuery }: Props) => {
+export const PostDetailButtonAndDialog = ({ post, comments, setComments, searchQuery }: Props) => {
   const [selectedPostForDetail, setSelectedPostForDetail] = useState<PostContent | null>(null)
   const updateCommentsState = (postId: number, newComments: Comment[]) => {
     setComments((prev) => ({ ...prev, [postId]: newComments }))

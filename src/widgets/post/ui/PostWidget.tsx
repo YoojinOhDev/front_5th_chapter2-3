@@ -21,7 +21,7 @@ import {
 
 import {
   PostAuthor,
-  PostDetailButton,
+  PostDetailButtonAndDialog,
   usePaginationAndSort,
   useComments,
   usePosts,
@@ -109,7 +109,7 @@ export const PostWidget = () => {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <PostDetailButton
+                        <PostDetailButtonAndDialog
                           post={post}
                           comments={comments}
                           setComments={setComments}

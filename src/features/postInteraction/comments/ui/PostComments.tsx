@@ -1,126 +1,19 @@
-import { Dispatch, SetStateAction, useState } from "react"
 import { Button, Dialog, DialogContent, DialogHeader, DialogTitle, highlightText, Textarea } from "@/shared/ui"
 import { Edit2, Plus, ThumbsUp, Trash2 } from "lucide-react"
-import { PostContent, Comments, Comment } from "@/entities/post"
+import { PostCommentsProps } from "../model/types"
+import { useAddComment, useEditComment, useDeleteComment, useLikeComment } from "../lib/useComments"
 
-const addCommentAPI = async (comment: { body: string; postId: number | null; userId: number }): Promise<Comment> => {
-  const response = await fetch("/api/comments/add", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(comment),
-  })
-  return response.json()
-}
+export const PostComments = ({ postId, comments, setComments, searchQuery }: PostCommentsProps) => {
+  const { newComment, setNewComment, showAddCommentDialog, setShowAddCommentDialog, addComment } = useAddComment(
+    comments,
+    setComments,
+  )
 
-const updateCommentAPI = async (comment: Comment): Promise<Comment> => {
-  const response = await fetch(`/api/comments/${comment.id}`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ body: comment.body }),
-  })
-  return response.json()
-}
+  const { selectedComment, setSelectedComment, showEditCommentDialog, setShowEditCommentDialog, updateComment } =
+    useEditComment(comments, setComments)
 
-const deleteCommentAPI = async (id: number): Promise<void> => {
-  await fetch(`/api/comments/${id}`, {
-    method: "DELETE",
-  })
-}
-
-const likeCommentAPI = async (id: number, likes: number): Promise<Comment> => {
-  const response = await fetch(`/api/comments/${id}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ likes: likes + 1 }),
-  })
-  return response.json()
-}
-
-export interface NewComment {
-  body: string
-  postId: number | null
-  userId: number
-}
-
-const defaultNewComment: NewComment = {
-  body: "",
-  postId: null,
-  userId: 1,
-}
-interface Props {
-  postId: PostContent["id"]
-  comments: Comments
-  setComments: Dispatch<SetStateAction<Comments>>
-  searchQuery: string
-}
-export const PostComments = ({ postId, comments, setComments, searchQuery }: Props) => {
-  const [selectedComment, setSelectedComment] = useState<Comment | null>(null)
-  const [newComment, setNewComment] = useState<NewComment>(defaultNewComment)
-
-  const [showAddCommentDialog, setShowAddCommentDialog] = useState<boolean>(false)
-  const [showEditCommentDialog, setShowEditCommentDialog] = useState<boolean>(false)
-  const updateCommentState = (postId: number, updatedComment: Comment) => {
-    setComments((prev) => ({
-      ...prev,
-      [postId]: prev[postId].map((comment) => (comment.id === updatedComment.id ? updatedComment : comment)),
-    }))
-  }
-
-  // 댓글 좋아요
-  const likeComment = async (id: number, postId: number) => {
-    try {
-      const comment = comments[postId]?.find((c) => c.id === id)
-      if (!comment) return
-
-      const data = await likeCommentAPI(id, comment.likes)
-      updateCommentState(postId, { ...data, likes: comment.likes + 1 })
-    } catch (error) {
-      console.error("댓글 좋아요 오류:", error)
-    }
-  }
-  const deleteCommentState = (postId: number, commentId: number) => {
-    setComments((prev) => ({
-      ...prev,
-      [postId]: prev[postId].filter((comment) => comment.id !== commentId),
-    }))
-  }
-
-  // 댓글 추가
-  const addComment = async () => {
-    try {
-      const data = await addCommentAPI(newComment)
-      setComments((prev) => ({
-        ...prev,
-        [data.postId]: [...(prev[data.postId] || []), data],
-      }))
-      setShowAddCommentDialog(false)
-      setNewComment(defaultNewComment)
-    } catch (error) {
-      console.error("댓글 추가 오류:", error)
-    }
-  }
-
-  // 댓글 업데이트
-  const updateComment = async () => {
-    if (!selectedComment) return
-    try {
-      const data = await updateCommentAPI(selectedComment)
-      updateCommentState(data.postId, data)
-      setShowEditCommentDialog(false)
-    } catch (error) {
-      console.error("댓글 업데이트 오류:", error)
-    }
-  }
-
-  // 댓글 삭제
-  const deleteComment = async (id: number, postId: number) => {
-    try {
-      await deleteCommentAPI(id)
-      deleteCommentState(postId, id)
-    } catch (error) {
-      console.error("댓글 삭제 오류:", error)
-    }
-  }
+  const { deleteComment } = useDeleteComment(comments, setComments)
+  const { likeComment } = useLikeComment(comments, setComments)
 
   return (
     <>
@@ -168,6 +61,7 @@ export const PostComments = ({ postId, comments, setComments, searchQuery }: Pro
           ))}
         </div>
       </div>
+
       {/* 댓글 추가 대화상자 */}
       <Dialog open={showAddCommentDialog} onOpenChange={setShowAddCommentDialog}>
         <DialogContent>
