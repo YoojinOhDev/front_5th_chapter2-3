@@ -35,11 +35,11 @@ export const useFetchPosts = (limit: number, skip: number, selectedTag: string |
   return query
 }
 
-export const useFetchPostsByTag = (tag: string | undefined) => {
+export const useFetchPostsByTag = (selectedTag: string | undefined) => {
   const query = useQuery<PostResponse | undefined>({
-    queryKey: ["posts", tag],
-    queryFn: () => fetchPostsByTagAPI(tag as string),
-    enabled: !!tag && tag !== "all",
+    queryKey: ["posts", selectedTag],
+    queryFn: () => fetchPostsByTagAPI(selectedTag as string),
+    enabled: !!selectedTag && selectedTag !== "all",
   })
 
   if (query.error) {
