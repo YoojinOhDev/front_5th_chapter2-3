@@ -1,47 +1,20 @@
-import { useState } from "react"
 import { MessageSquare } from "lucide-react"
-import { PostContent, Comment } from "@/entities/post"
+import { PostContent } from "@/entities/post"
 import { Button, Dialog, DialogContent, DialogHeader, DialogTitle, highlightText } from "@/shared/ui"
 import { PostComments } from "@/features/postInteraction"
-import { useAtom } from "jotai"
-import { commentsState } from "@/entities/post/model/atoms"
+import { usePostDetail } from "../model/usePostDetail"
 
 interface Props {
   post: PostContent
   searchQuery: string
 }
 
-const fetchCommentsAPI = async (postId: number): Promise<{ comments: Comment[] }> => {
-  const response = await fetch(`/api/comments/post/${postId}`)
-  return response.json()
-}
-
 export const PostDetailButtonAndDialog = ({ post, searchQuery }: Props) => {
-  const [selectedPostForDetail, setSelectedPostForDetail] = useState<PostContent | null>(null)
-  const [comments, setComments] = useAtom(commentsState)
-
-  const updateCommentsState = (postId: number, newComments: Comment[]) => {
-    setComments((prev) => ({ ...prev, [postId]: newComments }))
-  }
-
-  const fetchComments = async (postId: number) => {
-    if (comments[postId]) return
-    try {
-      const data = await fetchCommentsAPI(postId)
-      updateCommentsState(postId, data.comments)
-    } catch (error) {
-      console.error("댓글 가져오기 오류:", error)
-    }
-  }
-
-  const openPostDetail = (post: PostContent) => {
-    setSelectedPostForDetail(post)
-    fetchComments(post.id)
-  }
+  const { selectedPostForDetail, setSelectedPostForDetail, openPostDetail } = usePostDetail(post)
 
   return (
     <>
-      <Button variant="ghost" size="sm" onClick={() => openPostDetail(post)}>
+      <Button variant="ghost" size="sm" onClick={openPostDetail}>
         <MessageSquare className="w-4 h-4" />
       </Button>
 
